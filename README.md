@@ -1,6 +1,6 @@
 # AI_Tutor_System
 
-This AI tutor transforms course materials into an interactive chat using a strict RAG pipeline. Built with FastAPI, LangChain, and ChromaDB, it provides hallucination-free guidance, source citations, conversational memory, token streaming, and dynamic MCQ quizzes for a personalized learning experience.
+This AI tutor transforms course materials into an interactive chat using a strict RAG pipeline. Built with FastAPI, LangChain, and ChromaDB, it provides hallucination-free guidance, source citations, and quiz generation.
 
 ## 🗂️ Project Structure
 
@@ -28,116 +28,44 @@ AI_Tutor_System/
 
 # System Architecture
 
-┌─────────────────────────────────────────────────────────────────────┐
-│                         USER INTERFACE LAYER                       │
-├─────────────────────────────────────────────────────────────────────┤
-│  Streamlit Frontend                                                │
-│  frontend/pages/1_Student_Tutor.py                                │
-│                                                                     │
-│  • Chat UI                                                          │
-│  • Session State                                                    │
-│  • Chat History                                                     │
-│  • Student Input                                                    │
-└───────────────────────┬─────────────────────────────────────────────┘
-                        │ HTTP Request
-                        ▼
-┌─────────────────────────────────────────────────────────────────────┐
-│                           FASTAPI BACKEND                          │
-├─────────────────────────────────────────────────────────────────────┤
-│  main.py                                                            │
-│                                                                     │
-│  ┌──────────────────────────────────────────────────────────────┐   │
-│  │ CORS Middleware                                              │   │
-│  └──────────────────────────────────────────────────────────────┘   │
-│                                                                     │
-│  ┌──────────────────────────────────────────────────────────────┐   │
-│  │ API Router                                                   │   │
-│  │ api/routers/chat.py                                          │   │
-│  │                                                              │   │
-│  │ POST /chat                                                   │   │
-│  │ ├── Receive User Query                                       │   │
-│  │ ├── Call RAG Pipeline                                        │   │
-│  │ └── Return AI Response                                       │   │
-│  └──────────────────────────────────────────────────────────────┘   │
-└───────────────────────┬─────────────────────────────────────────────┘
-                        │
-                        ▼
-┌─────────────────────────────────────────────────────────────────────┐
-│                         CORE RAG ENGINE                            │
-├─────────────────────────────────────────────────────────────────────┤
-│                                                                     │
-│  core/rag.py                                                        │
-│                                                                     │
-│  User Question                                                      │
-│        │                                                            │
-│        ▼                                                            │
-│  ┌────────────────────────────┐                                    │
-│  │ ChromaDB Retriever         │                                    │
-│  │ Retrieve Top 3 Chunks      │                                    │
-│  └────────────┬───────────────┘                                    │
-│               │                                                    │
-│               ▼                                                    │
-│  ┌────────────────────────────┐                                    │
-│  │ Prompt Builder             │                                    │
-│  │                            │                                    │
-│  │ • System Prompt            │                                    │
-│  │ • Retrieved Context        │                                    │
-│  │ • User Question            │                                    │
-│  └────────────┬───────────────┘                                    │
-│               │                                                    │
-│               ▼                                                    │
-│  ┌────────────────────────────┐                                    │
-│  │ Gemini LLM                 │                                    │
-│  │ core/llm.py                │                                    │
-│  │                            │                                    │
-│  │ Gemini 1.5 Flash / Pro     │                                    │
-│  │ temperature = 0            │                                    │
-│  └────────────┬───────────────┘                                    │
-│               │                                                    │
-│               ▼                                                    │
-│        Tutor Response                                               │
-└───────────────────────┬─────────────────────────────────────────────┘
-                        │
-                        ▼
-┌─────────────────────────────────────────────────────────────────────┐
-│                         VECTOR DATABASE                            │
-├─────────────────────────────────────────────────────────────────────┤
-│                                                                     │
-│  ChromaDB                                                           │
-│  chroma_db/                                                         │
-│                                                                     │
-│  • Embedded syllabus chunks                                         │
-│  • Semantic similarity search                                       │
-│  • Persistent local storage                                         │
-│                                                                     │
-└───────────────────────┬─────────────────────────────────────────────┘
-                        │
-                        ▼
-┌─────────────────────────────────────────────────────────────────────┐
-│                     DATA INGESTION PIPELINE                        │
-├─────────────────────────────────────────────────────────────────────┤
-│                                                                     │
-│  PDF Syllabus                                                       │
-│        │                                                            │
-│        ▼                                                            │
-│  PyPDFLoader                                                        │
-│        │                                                            │
-│        ▼                                                            │
-│  RecursiveCharacterTextSplitter                                     │
-│  chunk_size = 1000                                                  │
-│  chunk_overlap = 200                                                │
-│        │                                                            │
-│        ▼                                                            │
-│  Gemini Embeddings                                                  │
-│  (GoogleGenerativeAIEmbeddings)                                     │
-│        │                                                            │
-│        ▼                                                            │
-│  Store vectors in ChromaDB                                          │
-└─────────────────────────────────────────────────────────────────────┘
+```text
++-----------------------+        HTTP Request         +-----------------------+
+|  Streamlit Frontend   |  ----------------------->  |    FastAPI Backend    |
++-----------------------+                            +-----------+-----------+
+        |                                                    |
+        |  User Input, Chat UI,                              |
+        |  Session State, Quiz Pages                         |
+        |                                                    v
+        |                                          +-----------------------+
+        +----------------------------------------->|  RAG Engine           |
+                                                   +-----------------------+
+                                                   | - ChromaDB Retrieval  |
+                                                   | - Prompt Building     |
+                                                   | - Gemini LLM          |
+                                                   +-----------------------+
+                                                            |
+                                                            v
+                                                   +-----------------------+
+                                                   |   Vector Database     |
+                                                   |   (ChromaDB)         |
+                                                   +-----------------------+
+                                                            ^
+                                                            |
+                                                   +-----------------------+
+                                                   |  Data Ingestion       |
+                                                   |  (PDF Parsing,        |
+                                                   |   Embeddings)         |
+                                                   +-----------------------+
+```
 
+## Component Overview
+- **Frontend:** Streamlit app for interactive UI (Student/Educator views, chat, quizzes)
+- **Backend:** FastAPI provides REST API for chat, ingestion, and quiz endpoints
+- **RAG Engine:** Retrieves context chunks from ChromaDB, constructs prompts, and uses Gemini LLM via LangChain
+- **Vector Database:** ChromaDB stores embedded document vectors and handles semantic search
+- **Data Ingestion:** Parsers PDF syllabus, splits text, computes embeddings (GoogleGenerativeAIEmbeddings), stores in ChromaDB
 
-UPDATED TECH STACK
-──────────────────────────────────────────────────────────────────────
+## UPDATED TECH STACK
 
 Frontend:
 - Streamlit
