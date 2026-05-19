@@ -61,25 +61,27 @@ def get_vector_store() -> Chroma:
         collection_name=COLLECTION_NAME
     )
 
-# --- Testing the pipeline locally ---
-if __name__ == "__main__":
-    try:
-        from document_parser import load_and_chunk_pdf
-    except ImportError:
-        print("Make sure this is in the same directory as document_parser.py")
-        exit(1)
 
-    sample_pdf_path = os.path.join("data_samples", "SEM-2 PRES.pdf")
+
+# # --- Testing the pipeline locally ---
+# if __name__ == "__main__":
+#     try:
+#         from document_parser import load_and_chunk_pdf
+#     except ImportError:
+#         print("Make sure this is in the same directory as document_parser.py")
+#         exit(1)
+
+#     sample_pdf_path = os.path.join("data_samples", "SEM-2 PRES.pdf")
     
-    if not os.path.exists(sample_pdf_path):
-        print(f"Cannot run test. Please place a real PDF at: {os.path.abspath(sample_pdf_path)}")
-    else:
-        try:
-            print("--- Starting Document Ingestion Pipeline ---")
-            chunks = load_and_chunk_pdf(sample_pdf_path)
+#     if not os.path.exists(sample_pdf_path):
+#         print(f"Cannot run test. Please place a real PDF at: {os.path.abspath(sample_pdf_path)}")
+#     else:
+#         try:
+#             print("--- Starting Document Ingestion Pipeline ---")
+#             chunks = load_and_chunk_pdf(sample_pdf_path)
             
-            if chunks:
-                db = create_vector_store(chunks)
-                print("\nPipeline Test Complete. Check your project root for the 'chroma_db' folder.")
-        except Exception as e:
-            print(f"An error occurred during vector store creation: {e}")
+#             if chunks:
+#                 db = create_vector_store(chunks)
+#                 print("\nPipeline Test Complete. Check your project root for the 'chroma_db' folder.")
+#         except Exception as e:
+#             print(f"An error occurred during vector store creation: {e}")
