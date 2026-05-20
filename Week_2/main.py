@@ -1,0 +1,33 @@
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+from api.routers.chat import router as chat_router
+from api.routers.ingest import router as ingest_router
+
+app = FastAPI(
+    title="Generative AI Tutor API",
+    description="Backend API for the EdTech Adaptive Learning Platform",
+    version="1.0.0"
+)
+
+# Add CORS middleware to allow the Streamlit frontend to communicate with this API
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # In production, lock this down to the specific domain of your frontend
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# Include the routers
+app.include_router(chat_router)
+app.include_router(ingest_router)
+
+@app.get("/health")
+def health_check():
+    """Simple endpoint to verify the server is running."""
+    return {"status": "healthy", "service": "AI Tutor API"}
+
+if __name__ == "__main__":
+    import uvicorn
+    # This block allows you to run the file directly via `python main.py`
+    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
