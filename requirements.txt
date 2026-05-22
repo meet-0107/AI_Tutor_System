@@ -5,3 +5,7 @@ chromadb
 streamlit
 langchain-chroma
 langchain-google-genai
+# PyPDFLoader
+langchain-community
+langchain-core
+pypdf
