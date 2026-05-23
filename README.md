@@ -220,11 +220,3 @@ PDF Input
 **Text Splitting:**
 - RecursiveCharacterTextSplitter (1000 char chunks with 200 char overlap)
 
-## Key Features
-
-✅ **Strict RAG Pipeline** - Context-grounded responses from indexed documents  
-✅ **Hallucination-Free** - Responses limited to document content  
-✅ **Source Citations** - All answers include document references  
-✅ **Scalable Architecture** - Modular design for weeks 3-4 enhancements  
-✅ **Local Vector DB** - ChromaDB for efficient semantic search  
-✅ **Streaming Support** - Real-time response generation  
