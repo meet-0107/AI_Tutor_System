@@ -124,19 +124,21 @@ AI_Tutor_System/
     │ Step 6: Response + Citations         │
     └──────────┬───────────────────────────┘
                │
-               ├─────────────────┬─────────────────┐
-               │                 │                 │
-               v                 v                 v
-    ┌─────────────────────────┐  ┌─────────────────────────┐  ┌─────────────────────────┐
-    │ LangChain Integration   │  │ ChromaDB Retriever      │  │ LLM API Integration     │
-    ├─────────────────────────┤  ├─────────────────────────┤  ├─────────────────────────┤
-    │ • Vector Retriever      │  │ • Get Query Embeddings  │  │ • LLM Instance          │
-    │ • Prompt Templates      │  │ • Similarity Search     │  │ • Prompt: Context+Query │
-    │ • LLM Chain Integration │  │ • Return Top K          │  │ • Generate Response     │
-    │ • Streaming Support     │  │   Relevant Chunks       │  │ • Stream Tokens         │
-    └─────────┬───────────────┘  └─────────────────────────┘  └─────────────┬───────────┘
-              │                                                              │
-              └──────────────────────────┬───────────────────────────────────┘
+               ├──────────────┬──────────────┬──────────────┐
+               │              │              │              │
+               v              v              v              v
+    ┌──────────────────────┐  ┌──────────────────────┐  ┌──────────────────────┐
+    │ LangChain            │  │ ChromaDB             │  │ LLM API              │
+    │ Integration          │  │ Retriever            │  │ Integration          │
+    ├──────────────────────┤  ├──────────────────────┤  ├──────────────────────┤
+    │ • Vector Retriever   │  │ • Get Query          │  │ • LLM Instance       │
+    │ • Prompt Templates   │  │   Embeddings         │  │   (configurable)     │
+    │ • LLM Chain          │  │ • Similarity Search  │  │ • Prompt: Context +  │
+    │   Integration        │  │ • Return Top K       │  │   Query              │
+    │ • Streaming Support  │  │   Relevant Chunks    │  │ • Generate Response  │
+    └──────────┬───────────┘  └──────────┬───────────┘  └──────────┬───────────┘
+               │                         │                         │
+               └─────────────────────────┼─────────────────────────┘
                                          │
                                          v
                         ┌────────────────────────────────┐
