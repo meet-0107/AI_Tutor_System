@@ -2,23 +2,36 @@ import os
 from typing import List
 from dotenv import load_dotenv
 from langchain_core.documents import Document
-from langchain_google_genai import GoogleGenerativeAIEmbeddings
+from langchain_ollama import OllamaEmbeddings
 from langchain_chroma import Chroma 
 
-# Load environment variables (specifically GOOGLE_API_KEY from your .env file)
-load_dotenv()
+# # Load environment variables (specifically GOOGLE_API_KEY from your .env file)
+# load_dotenv()
 
 # Define where the local database will be saved
 CHROMA_PATH = "chroma_db"
 COLLECTION_NAME = "ai_tutor_syllabus"
 
+class NomicOllamaEmbeddings(OllamaEmbeddings):
+    """
+    Custom wrapper for OllamaEmbeddings using nomic-embed-text.
+    Nomic Embed Text requires specific prefixes for search queries and documents.
+    """
+    def embed_documents(self, texts: List[str]) -> List[List[float]]:
+        # Add the 'search_document: ' prefix to each document chunk
+        prefixed_texts = [f"search_document: {text}" for text in texts]
+        return super().embed_documents(prefixed_texts)
+
+    def embed_query(self, text: str) -> List[float]:
+        # Add the 'search_query: ' prefix to the query
+        prefixed_text = f"search_query: {text}"
+        return super().embed_query(prefixed_text)
+
 def create_vector_store(chunks: List[Document]) -> Chroma:
     """
     Embeds document chunks using Gemini and saves them in a local, persistent ChromaDB.
     """
-    # 1. Verify API Key
-    if not os.environ.get("GOOGLE_API_KEY"):
-        raise ValueError("GOOGLE_API_KEY not found. Please ensure it is set in your .env file.")
+    # Removed Google API Key verification as we're using local HuggingFace embeddings
 
     # --- BUG FIX: Filter out empty or whitespace-only chunks ---
     valid_chunks = []
@@ -31,8 +44,22 @@ def create_vector_store(chunks: List[Document]) -> Chroma:
     if not valid_chunks:
         raise ValueError("No valid text chunks remained after filtering empty content. Cannot build vector store.")
 
-    print("Initializing Google Gemini Embeddings (models/gemini-embedding-001)...")
-    embeddings = GoogleGenerativeAIEmbeddings(model="models/gemini-embedding-001")
+    # Clear existing vector store collection if it exists to avoid dimension mismatches/conflicts
+    if os.path.exists(CHROMA_PATH):
+        print(f"Clearing existing collection '{COLLECTION_NAME}' in database at '{CHROMA_PATH}' to prevent conflicts...")
+        import chromadb
+        try:
+            client = chromadb.PersistentClient(path=CHROMA_PATH)
+            client.delete_collection(COLLECTION_NAME)
+            print("Collection successfully cleared!")
+        except ValueError:
+            # Collection doesn't exist, which is fine
+            pass
+        except Exception as e:
+            print(f"Warning: Could not clear existing collection: {e}")
+
+    print("Initializing Ollama Embeddings with Nomic prefixes (nomic-embed-text)...")
+    embeddings = NomicOllamaEmbeddings(model="nomic-embed-text")
 
     print(f"Embedding {len(valid_chunks)} chunks and saving to local database at '{CHROMA_PATH}'...")
     
@@ -55,7 +82,7 @@ def get_vector_store() -> Chroma:
     """
     Loads the existing local ChromaDB instance for querying.
     """
-    embeddings = GoogleGenerativeAIEmbeddings(model="models/gemini-embedding-001")
+    embeddings = NomicOllamaEmbeddings(model="nomic-embed-text")
     return Chroma(
         persist_directory=CHROMA_PATH,
         embedding_function=embeddings,
@@ -63,35 +90,35 @@ def get_vector_store() -> Chroma:
     )
 
 
-# # --- Testing the pipeline locally ---
-# if __name__ == "__main__":
-#     try:
-#         from document_parser import load_and_chunk_pdf
-#     except ImportError:
-#         print("Make sure this is in the same directory as document_parser.py")
-#         exit(1)
+# --- Testing the pipeline locally ---
+if __name__ == "__main__":
+    try:
+        from document_parser import load_and_chunk_pdf
+    except ImportError:
+        print("Make sure this is in the same directory as document_parser.py")
+        exit(1)
 
-#     data_samples_dir = "data_samples"
+    data_samples_dir = "data_samples"
     
-#     if not os.path.exists(data_samples_dir) or not os.listdir(data_samples_dir):
-#         print(f"Cannot run test. Please place real PDFs in the '{data_samples_dir}' folder.")
-#     else:
-#         try:
-#             print("--- Starting Document Ingestion Pipeline ---")
-#             all_chunks = []
+    if not os.path.exists(data_samples_dir) or not os.listdir(data_samples_dir):
+        print(f"Cannot run test. Please place real PDFs in the '{data_samples_dir}' folder.")
+    else:
+        try:
+            print("--- Starting Document Ingestion Pipeline ---")
+            all_chunks = []
             
-#             # Loop through all files in the data_samples directory
-#             for filename in os.listdir(data_samples_dir):
-#                 if filename.lower().endswith(".pdf"):
-#                     pdf_path = os.path.join(data_samples_dir, filename)
-#                     print(f"\nProcessing: {filename}")
-#                     chunks = load_and_chunk_pdf(pdf_path)
-#                     all_chunks.extend(chunks)
+            # Loop through all files in the data_samples directory
+            for filename in os.listdir(data_samples_dir):
+                if filename.lower().endswith(".pdf"):
+                    pdf_path = os.path.join(data_samples_dir, filename)
+                    print(f"\nProcessing: {filename}")
+                    chunks = load_and_chunk_pdf(pdf_path)
+                    all_chunks.extend(chunks)
             
-#             if all_chunks:
-#                 db = create_vector_store(all_chunks)
-#                 print("\nPipeline Test Complete. Check your project root for the 'chroma_db' folder.")
-#             else:
-#                 print("\nNo valid PDF chunks were found in the data_samples folder.")
-#         except Exception as e:
-#             print(f"An error occurred during vector store creation: {e}")
+            if all_chunks:
+                db = create_vector_store(all_chunks)
+                print("\nPipeline Test Complete. Check your project root for the 'chroma_db' folder.")
+            else:
+                print("\nNo valid PDF chunks were found in the data_samples folder.")
+        except Exception as e:
+            print(f"An error occurred during vector store creation: {e}")

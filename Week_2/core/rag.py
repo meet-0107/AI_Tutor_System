@@ -44,7 +44,7 @@ if __name__ == "__main__":
         chain = get_rag_chain()
         
         print("--- Testing RAG Chain ---")
-        test_question = "What are the main topics covered in this course?"
+        test_question = "who is internal guide?"
         print(f"Question: {test_question}\n")
         
         # Invoke the chain with a test string

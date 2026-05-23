@@ -46,28 +46,28 @@ def load_and_chunk_pdf(file_path: str) -> List[Document]:
 
 
 
-# # --- Testing the pipeline locally ---
-# if __name__ == "__main__":
-#     # Define the path to the sample syllabus
-#     # Assuming this script is run from the root of the 'ai-tutor-platform' project
-#     sample_pdf_path = os.path.join("data_samples", "SEM-2 PRES.pdf")
+# --- Testing the pipeline locally ---
+if __name__ == "__main__":
+    # Define the path to the sample syllabus
+    # Assuming this script is run from the root of the 'ai-tutor-platform' project
+    sample_pdf_path = os.path.join("data_samples", "AIML-NOTE.pdf")
     
-#     # Create a dummy PDF for testing if it doesn't exist
-#     os.makedirs("data_samples", exist_ok=True)
-#     if not os.path.exists(sample_pdf_path):
-#         print("Creating a dummy PDF for testing...")
-#         # A quick way to test without a real PDF is to handle the error or create one manually.
-#         # For actual testing, make sure you drop a real PDF named 'sample_syllabus.pdf' into 'data_samples/'.
-#         print(f"Please place a real PDF at '{sample_pdf_path}' to run this test.")
-#     else:
-#         try:
-#             # Execute the parsing function
-#             document_chunks = load_and_chunk_pdf(sample_pdf_path)
+    # Create a dummy PDF for testing if it doesn't exist
+    os.makedirs("data_samples", exist_ok=True)
+    if not os.path.exists(sample_pdf_path):
+        print("Creating a dummy PDF for testing...")
+        # A quick way to test without a real PDF is to handle the error or create one manually.
+        # For actual testing, make sure you drop a real PDF named 'sample_syllabus.pdf' into 'data_samples/'.
+        print(f"Please place a real PDF at '{sample_pdf_path}' to run this test.")
+    else:
+        try:
+            # Execute the parsing function
+            document_chunks = load_and_chunk_pdf(sample_pdf_path)
             
-#             # Print a preview of the first chunk to verify metadata and content
-#             if document_chunks:
-#                 print("\n--- Preview of Chunk 1 ---")
-#                 print(f"Metadata: {document_chunks[0].metadata}")
-#                 print(f"Content:\n{document_chunks[0].page_content[:300]}...\n")
-#         except Exception as e:
-#             print(f"An error occurred: {e}")
+            # Print a preview of the first chunk to verify metadata and content
+            if document_chunks:
+                print("\n--- Preview of Chunk 1 ---")
+                print(f"Metadata: {document_chunks[0].metadata}")
+                print(f"Content:\n{document_chunks[0].page_content[:300]}...\n")
+        except Exception as e:
+            print(f"An error occurred: {e}")
