@@ -31,12 +31,12 @@ AI_Tutor_System/
 ## Complete Data Flow & RAG Pipeline
 
 ```text
-┌──────────────────────────────────────────────────────────────────────────────┐
-│                    WEEK 1 & 2: COMPLETE AI TUTOR PIPELINE                    │
-└──────────────────────────────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────────────────┐
+│                    WEEK 1 & 2: COMPLETE AI TUTOR PIPELINE                │
+└──────────────────────────────────────────────────────────────────────────┘
 
-                              DATA INGESTION PHASE (WEEK 1)
-                              ════════════════════════════
+                          DATA INGESTION PHASE (WEEK 1)
+                          ════════════════════════════
 
         ┌──────────────────────┐
         │   PDF Documents      │
@@ -124,44 +124,34 @@ AI_Tutor_System/
     │ Step 6: Response + Citations         │
     └──────────┬───────────────────────────┘
                │
-       ┌───────┴───────────┐
-       │                   │
-       v                   v
-    ┌─────────────────────────────────┐  ┌──────────────────────────┐
-    │  LangChain Integration          │  │  ChromaDB Retriever      │
-    ├─────────────────────────────────┤  ├──────────────────────────┤
-    │  • Vector Retriever             │  │  • Get Query Embeddings  │
-    │  • Prompt Templates             │  │  • Similarity Search     │
-    │  • LLM Chain Integration        │  │  • Return Top K          │
-    │  • Streaming Support            │  │    Relevant Chunks       │
-    └──────────┬────────────────────┬─┘  └──────────────────────────┘
-               │                    │
-               └────────┬───────────┘
-                        │
-                        v
-            ┌────────────────────────────────┐
-            │  LLM API Integration           │
-            ├────────────────────────────────┤
-            │  • LLM Instance (configurable) │
-            │  • Prompt: Context + Query     │
-            │  • Generate Response           │
-            │  • Stream Tokens (if enabled)  │
-            └────────────┬───────────────────┘
-                         │
-                         v
-            ┌────────────────────────────────┐
-            │  Generated Response            │
-            ├────────────────────────────────┤
-            │  • Answer to User Query        │
-            │  • Source Citations            │
-            │  • Confidence/Metadata         │
-            └────────────┬───────────────────┘
-                         │
-                         v
-    ┌──────────────────────────────────┐
-    │  HTTP Response to Frontend       │
-    │  (Streamed or Complete Response) │
-    └──────────────────────────────────┘
+               ├─────────────────┬─────────────────┐
+               │                 │                 │
+               v                 v                 v
+    ┌─────────────────────────┐  ┌─────────────────────────┐  ┌─────────────────────────┐
+    │ LangChain Integration   │  │ ChromaDB Retriever      │  │ LLM API Integration     │
+    ├─────────────────────────┤  ├─────────────────────────┤  ├─────────────────────────┤
+    │ • Vector Retriever      │  │ • Get Query Embeddings  │  │ • LLM Instance          │
+    │ • Prompt Templates      │  │ • Similarity Search     │  │ • Prompt: Context+Query │
+    │ • LLM Chain Integration │  │ • Return Top K          │  │ • Generate Response     │
+    │ • Streaming Support     │  │   Relevant Chunks       │  │ • Stream Tokens         │
+    └─────────┬───────────────┘  └─────────────────────────┘  └─────────────┬───────────┘
+              │                                                              │
+              └──────────────────────────┬───────────────────────────────────┘
+                                         │
+                                         v
+                        ┌────────────────────────────────┐
+                        │  Generated Response            │
+                        ├────────────────────────────────┤
+                        │  • Answer to User Query        │
+                        │  • Source Citations            │
+                        │  • Confidence/Metadata         │
+                        └────────────┬───────────────────┘
+                                     │
+                                     v
+                    ┌──────────────────────────────────┐
+                    │  HTTP Response to Frontend       │
+                    │  (Streamed or Complete Response) │
+                    └──────────────────────────────────┘
 ```
 
 ## Complete Data Flow
