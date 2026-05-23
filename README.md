@@ -28,12 +28,15 @@ AI_Tutor_System/
 
 # System Architecture (Week 1 & Week 2)
 
-## Week 1: Data Ingestion & Vector Database Pipeline
+## Complete Data Flow & RAG Pipeline
 
 ```text
-┌──────────────────────────────────────────────────────────────────────────┐
-│                    WEEK 1: DATA INGESTION PIPELINE                       │
-└──────────────────────────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────────────────────┐
+│                    WEEK 1 & 2: COMPLETE AI TUTOR PIPELINE                    │
+└──────────────────────────────────────────────────────────────────────────────┘
+
+                              DATA INGESTION PHASE (WEEK 1)
+                              ════════════════════════════
 
         ┌──────────────────────┐
         │   PDF Documents      │
@@ -76,85 +79,89 @@ AI_Tutor_System/
         │  • Persistent Storage            │
         │  • Collection: ai_tutor_syllabus │
         │  • Local Path: chroma_db/        │
-        │  • Embedded Document Vectors    │
+        │  • Embedded Document Vectors     │
         └──────────────────────────────────┘
-```
 
-## Week 2: RAG Engine & FastAPI Backend
 
-```text
-┌────────────────────────────────────────────────────────────────────────────┐
-│                 WEEK 2: RAG ENGINE & CORE API BACKEND                      │
-└────────────────────────────────────────────────────────────────────────────┘
+                       QUERY & RAG EXECUTION PHASE (WEEK 2)
+                       ══════════════════════════════════════
 
     ┌──────────────────────┐
-    │  User Query/Chat     │                    ┌─────────────────────────┐
-    │  Request             │───HTTP Request────>│  FastAPI Backend        │
-    │  (from Frontend)     │                    │  (Week_2/main.py)       │
-    └──────────────────────┘                    ├─────────────────────────┤
-                                                │  CORS Middleware        │
-                                                │  Allow Frontend Origin  │
-                                                └────────────┬────────────┘
-                                                             │
-                                                             v
-                                                ┌─────────────────────────┐
-                                                │   FastAPI Routes        │
-                                                ├─────────────────────────┤
-                                                │  • /chat (chat_router)  │
-                                                │  • /ingest              │
-                                                │  • /health              │
-                                                └────────────┬────────────┘
-                                                             │
-                                                             v
-                                                ┌─────────────────────────┐
-                                                │   RAG Engine Core       │
-                                                │   (Week_2/core/)        │
-                                                ├─────────────────────────┤
-                                                │ 1. Query Embedding      │
-                                                │ 2. Vector Similarity    │
-                                                │    Search (ChromaDB)    │
-                                                │ 3. Retrieve Context     │
-                                                │ 4. Prompt Construction  │
-                                                │ 5. LLM Generation       │
-                                                │ 6. Response + Citations │
-                                                └────────────┬────────────┘
-                                                             │
-                       ┌─────────────────────────────────────┴──────────────┐
-                       │                                                    │
-                       v                                                    v
-        ┌────────────────────────────────┐              ┌──────────────────────┐
-        │   LangChain Integration        │              │   ChromaDB Retriever │
-        ├────────────────────────────────┤              ├──────────────────────┤
-        │ • Vector Retriever             │              │ • Get Embeddings     │
-        │ • Prompt Templates             │              │ • Similarity Search  │
-        │ • LLM Chain Integration        │              │ • Return Top K       │
-        │ • Streaming Support            │              │   Relevant Chunks    │
-        └────────────┬───────────────────┘              └──────────────────────┘
-                     │
-                     v
-        ┌──────────────────────────────────────┐
-        │  LLM API Integration                 │
-        ├──────────────────────────────────────┤
-        │  • LLM Instance (configurable)       │
-        │  • Prompt: Context + Query           │
-        │  • Generate Response                 │
-        │  • Stream Tokens (if enabled)        │
-        └────────────┬─────────────────────────┘
-                     │
-                     v
-        ┌──────────────────────────────────────┐
-        │   Generated Response                 │
-        ├──────────────────────────────────────┤
-        │  • Answer to User Query              │
-        │  • Source Citations                  │
-        │  • Confidence/Metadata               │
-        └────────────┬─────────────────────────┘
-                     │
-                     v
-    ┌──────────────────────────────┐
-    │  HTTP Response to Frontend   │
-    │  (Streamed or Complete)      │
-    └──────────────────────────────┘
+    │  User Query/Chat     │
+    │  Request             │
+    │  (from Frontend)     │
+    └──────────┬───────────┘
+               │
+               │ HTTP Request
+               v
+    ┌──────────────────────────────────────┐
+    │     FastAPI Backend                  │
+    │     (Week_2/main.py)                 │
+    ├──────────────────────────────────────┤
+    │  • CORS Middleware                   │
+    │  • Allow Frontend Origin             │
+    └──────────┬───────────────────────────┘
+               │
+               v
+    ┌──────────────────────────────────────┐
+    │     FastAPI Routes                   │
+    ├──────────────────────────────────────┤
+    │  • /chat (chat_router)               │
+    │  • /ingest                           │
+    │  • /health                           │
+    └──────────┬───────────────────────────┘
+               │
+               v
+    ┌──────────────────────────────────────┐
+    │  RAG Engine Core (Week_2/core/)      │
+    ├──────────────────────────────────────┤
+    │ Step 1: Query Embedding              │
+    │ Step 2: Vector Similarity Search     │
+    │         (ChromaDB Retrieval)         │
+    │ Step 3: Retrieve Context Chunks      │
+    │ Step 4: Prompt Construction          │
+    │ Step 5: LLM Generation               │
+    │ Step 6: Response + Citations         │
+    └──────────┬───────────────────────────┘
+               │
+       ┌───────┴───────────┐
+       │                   │
+       v                   v
+    ┌─────────────────────────────────┐  ┌──────────────────────────┐
+    │  LangChain Integration          │  │  ChromaDB Retriever      │
+    ├─────────────────────────────────┤  ├──────────────────────────┤
+    │  • Vector Retriever             │  │  • Get Query Embeddings  │
+    │  • Prompt Templates             │  │  • Similarity Search     │
+    │  • LLM Chain Integration        │  │  • Return Top K          │
+    │  • Streaming Support            │  │    Relevant Chunks       │
+    └──────────┬────────────────────┬─┘  └──────────────────────────┘
+               │                    │
+               └────────┬───────────┘
+                        │
+                        v
+            ┌────────────────────────────────┐
+            │  LLM API Integration           │
+            ├────────────────────────────────┤
+            │  • LLM Instance (configurable) │
+            │  • Prompt: Context + Query     │
+            │  • Generate Response           │
+            │  • Stream Tokens (if enabled)  │
+            └────────────┬───────────────────┘
+                         │
+                         v
+            ┌────────────────────────────────┐
+            │  Generated Response            │
+            ├────────────────────────────────┤
+            │  • Answer to User Query        │
+            │  • Source Citations            │
+            │  • Confidence/Metadata         │
+            └────────────┬───────────────────┘
+                         │
+                         v
+    ┌──────────────────────────────────┐
+    │  HTTP Response to Frontend       │
+    │  (Streamed or Complete Response) │
+    └──────────────────────────────────┘
 ```
 
 ## Complete Data Flow
@@ -219,4 +226,3 @@ PDF Input
 
 **Text Splitting:**
 - RecursiveCharacterTextSplitter (1000 char chunks with 200 char overlap)
-
