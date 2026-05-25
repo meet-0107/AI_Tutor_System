@@ -1,0 +1,76 @@
+AI TUTOR SYSTEM - COMBINED WORKFLOW (WEEK 1 & WEEK 2)
+=====================================================
+
+This document outlines the end-to-end data ingestion, storage, retrieval, and API workflow combining the deliverables of Week 1 and Week 2.
+
+───────────────────────────────────────────────────────────────────────────
+                       VISUAL WORKFLOW ARCHITECTURE
+───────────────────────────────────────────────────────────────────────────
+
+   [Educator / User]                      [Student / Client]
+           │                                      │
+           │ (1) Upload PDF                       │ (5) Send Question
+           ▼                                      ▼
+ ┌───────────────────┐                  ┌───────────────────┐
+ │   POST /ingest    │                  │    POST /chat     │
+ └─────────┬─────────┘                  └─────────┬─────────┘
+           │                                      │
+           ▼                                      ▼
+ ┌───────────────────┐                  ┌───────────────────┐
+ │ PyPDFLoader       │                  │ Retrieve chunks   │◄──────┐
+ │ (Load & Parse)    │                  │ (k=3) from Pinecone│       │
+ └─────────┬─────────┘                  └─────────┬─────────┘       │
+           │                                      │                 │
+           ▼                                      ▼                 │
+ ┌───────────────────┐                  ┌───────────────────┐       │
+ │ RecursiveText-    │                  │ Format prompt     │       │
+ │ Splitter (Chunks) │                  │ (Context + Q)     │       │
+ └─────────┬─────────┘                  └─────────┬─────────┘       │
+           │                                      │                 │
+           ▼                                      ▼                 │
+ ┌───────────────────┐                  ┌───────────────────┐       │
+ │ Ollama Embeddings │                  │ Ollama LLM        │       │
+ │ (Vectorization)   │                  │ (phi3 model)      │       │
+ └─────────┬─────────┘                  └─────────┬─────────┘       │
+           │                                      │                 │
+           ▼                                      ▼                 │
+ ┌───────────────────┐                  ┌───────────────────┐       │
+ │ Pinecone Database ├─────────────────►│   Cloud storage   ├───────┘
+ │ (ai-tutor-syllabus)│                 │   (Pinecone index)│
+ └───────────────────┘                  └───────────────────┘
+
+
+───────────────────────────────────────────────────────────────────────────
+                    STEP-BY-STEP PIPELINE EXECUTION
+───────────────────────────────────────────────────────────────────────────
+
+1. DATA INGESTION (Week 1 / Week 2 API)
+   a. The client sends a PDF file (e.g. sample_syllabus.pdf) via POST request to /ingest.
+   b. Week 2 Ingest Router (api/routers/ingest.py) receives the file, saves it to a temporary directory, and passes it to Week 1 Document Parser.
+   c. Week 1 Parser (document_parser.py) loads the PDF using PyPDFLoader and splits it using RecursiveCharacterTextSplitter:
+      - Chunk Size: 1000 characters
+      - Chunk Overlap: 200 characters
+
+2. EMBEDDING & STORAGE (Week 1 / Week 2 API)
+   a. The chunks are passed to the Week 1 Vector Store manager (vector_store.py).
+   b. It initializes Gemini's embedding model: gemini-embedding-2-preview.
+   c. The text chunks are embedded and saved into a cloud Pinecone index.
+   d. The API returns a JSON response containing a success message and the number of chunks processed.
+
+3. SOCRATIC CHAT & RETRIEVAL (Week 2 Core)
+   a. The client sends a student message payload via POST request to /chat.
+   b. The Chat Router (api/routers/chat.py) invokes the compiled LCEL RAG Chain (core/rag.py).
+   c. The RAG Chain uses Pinecone as a retriever to fetch the top 3 most semantically similar chunks matching the student's question.
+   d. The chunks are formatted into a single context string.
+   e. The prompt template (core/prompts.py) compiles the context and student question, enforcing a rule that the LLM must answer strictly based on the context.
+   f. The Ollama model (phi3 in core/llm.py) runs on the prompt template with temperature=0.1 to guarantee a hallucination-free response.
+   g. The Chat endpoint returns the final Socratic answer.
+
+4. AUTOMATED INTEGRATION TESTS (Week 2 Workflow)
+   a. Automated tests bypass the API completely and use python's unittest.
+   b. Mock wrappers can be used to dynamically replace the Ollama embeddings and LLM classes with mock implementations, allowing tests to run instantaneously in CI (e.g., GitHub Actions).
+   c. The script executes the pipeline sequentially:
+      - Pings GET /health to ensure server readiness.
+      - Calls POST /ingest to load, chunk, and embed the syllabus.
+      - Calls POST /chat to verify the retrieval and generation pipeline.
+      - Gracefully terminates the server.

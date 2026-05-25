@@ -1,6 +1,6 @@
 # AI_Tutor_System
 
-This AI tutor transforms course materials into an interactive chat using a strict RAG pipeline. Built with FastAPI, LangChain, and ChromaDB, it provides hallucination-free guidance, source citations.
+This AI tutor transforms course materials into an interactive chat using a strict RAG pipeline. Built with FastAPI, LangChain, and Pinecone, it provides hallucination-free guidance, source citations, and quizzes using local Ollama (Phi3) models.
 
 ## 🗂️ Project Structure
 
@@ -8,7 +8,7 @@ This AI tutor transforms course materials into an interactive chat using a stric
 AI_Tutor_System/
 ├── Week_1/                  # Data Ingestion & Vector Database
 │   ├── document_parser.py   # PDF loading and text chunking
-│   └── vector_store.py      # ChromaDB setup and embedding generation
+│   └── vector_store.py      # Pinecone setup and embedding generation
 ├── Week_2/                  # RAG Engine & Core API
 │   ├── api/                 # FastAPI routes (chat, ingest) and schemas
 │   ├── core/                # RAG logic, Prompts, and LLM setup
@@ -69,19 +69,17 @@ AI_Tutor_System/
         │    (wrapper for nomic-embed-text)│
         │  • Add search prefixes           │
         │  • Filter empty chunks           │
-        │  • Initialize Chroma Vector DB   │
+        │  • Initialize Pinecone Vector DB │
         └──────────┬───────────────────────┘
                    │
                    v
         ┌──────────────────────────────────┐
-        │   ChromaDB Vector Database       │
+        │   Pinecone Vector Database       │
         ├──────────────────────────────────┤
-        │  • Persistent Storage            │
+        │  • Cloud Storage                 │
         │  • Collection: ai_tutor_syllabus │
-        │  • Local Path: chroma_db/        │
         │  • Embedded Document Vectors     │
         └──────────────────────────────────┘
-
 
                        QUERY & RAG EXECUTION PHASE (WEEK 2)
                        ══════════════════════════════════════
@@ -117,10 +115,11 @@ AI_Tutor_System/
     ├──────────────────────────────────────┤
     │ Step 1: Query Embedding              │
     │ Step 2: Vector Similarity Search     │
-    │         (ChromaDB Retrieval)         │
+    │         (Pinecone Retrieval)         │
     │ Step 3: Retrieve Context Chunks      │
     │ Step 4: Prompt Construction          │
     │ Step 5: LLM Generation               │
+    │         (Ollama Phi3)                │
     │ Step 6: Response + Citations         │
     └──────────┬───────────────────────────┘
                │
@@ -128,11 +127,11 @@ AI_Tutor_System/
                │                             │              │
                v                             v              v
     ┌──────────────────────┐  ┌──────────────────────┐  ┌──────────────────────┐
-    │ LangChain            │  │ ChromaDB             │  │ LLM API              │
-    │ Integration          │  │ Retriever            │  │ Integration          │
+    │ LangChain            │  │ Pinecone             │  │ Ollama Local Engine  │
+    │ Integration          │  │ Retriever            │  │ (Phi3 Model)         │
     ├──────────────────────┤  ├──────────────────────┤  ├──────────────────────┤
     │ • Vector Retriever   │  │ • Get Query          │  │ • LLM Instance       │
-    │ • Prompt Templates   │  │   Embeddings         │  │   (configurable)     │
+    │ • Prompt Templates   │  │   Embeddings         │  │   (Phi3)             │
     │ • LLM Chain          │  │ • Similarity Search  │  │ • Prompt: Context +  │
     │   Integration        │  │ • Return Top K       │  │   Query              │
     │ • Streaming Support  │  │   Relevant Chunks    │  │ • Generate Response  │
@@ -156,39 +155,13 @@ AI_Tutor_System/
                     └──────────────────────────────────┘
 ```
 
-## Complete Data Flow
-
-```text
-PDF Input
-   │
-   ├─> [Document Parser] 
-   │   (PyPDFLoader)
-   │
-   ├─> [Text Chunking]
-   │   (RecursiveCharacterTextSplitter)
-   │
-   ├─> [Embedding Generation]
-   │   (NomicOllamaEmbeddings with search prefixes)
-   │
-   ├─> [Vector Storage]
-   │   (ChromaDB persistent database)
-   │
-   └─> [RAG Pipeline at Query Time]
-       │
-       ├─> Retrieve relevant chunks from ChromaDB
-       ├─> Build context-aware prompt with retrieved chunks
-       ├─> Send to LLM for generation
-       ├─> Attach source citations
-       └─> Return to user via FastAPI
-```
-
 ## Component Overview
 
 - **Frontend:** Streamlit app for interactive UI (Student/Educator views, chat, quizzes)
 - **Backend:** FastAPI with Uvicorn provides REST API for chat, ingestion, and quiz endpoints
-- **RAG Engine:** Retrieves context chunks from ChromaDB, constructs prompts, generates responses via LLM with LangChain
-- **Vector Database:** ChromaDB stores embedded document vectors and handles semantic search
-- **Data Ingestion:** Parses PDF documents, splits text into chunks, computes embeddings with Ollama (nomic-embed-text), and persists in ChromaDB
+- **RAG Engine:** Retrieves context chunks from Pinecone, constructs prompts, generates responses using local Ollama Phi3 LLM via LangChain
+- **Vector Database:** Pinecone stores embedded document vectors and handles semantic search
+- **Data Ingestion:** Parses PDF documents, splits text into chunks, computes embeddings with Ollama (nomic-embed-text), and persists in Pinecone cloud
 - **Embeddings:** NomicOllamaEmbeddings wrapper with search prefixes for optimal retrieval
 
 ## UPDATED TECH STACK
@@ -201,7 +174,7 @@ PDF Input
 - Uvicorn
 
 **LLM:**
-- Configurable (Gemini API or other LLMs via LangChain)
+- Ollama (Phi3)
 
 **Framework:**
 - LangChain (document loaders, retrievers, chains, integrations)
@@ -211,7 +184,7 @@ PDF Input
 - NomicOllamaEmbeddings (custom wrapper with search prefixes)
 
 **Vector Database:**
-- ChromaDB (persistent local storage at `chroma_db/`)
+- Pinecone
 
 **PDF Parsing:**
 - PyPDFLoader (from LangChain)
