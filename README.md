@@ -1,6 +1,6 @@
 # AI_Tutor_System
 
-This AI tutor transforms course materials into an interactive chat using a strict RAG pipeline. Built with FastAPI, LangChain, and ChromaDB, it provides hallucination-free guidance, source citations, [...]
+This AI tutor transforms course materials into an interactive chat using a strict RAG pipeline. Built with FastAPI, LangChain, and ChromaDB, it provides hallucination-free guidance, source citations.
 
 ## 🗂️ Project Structure
 
@@ -28,124 +28,193 @@ AI_Tutor_System/
 
 # System Architecture (Week 1 & Week 2)
 
+## Complete Data Flow & RAG Pipeline
+
 ```text
-                            ┌─────────────────────────────────────────────────────────────┐
-                            │               WEEK 1: DATA INGESTION                        │
-                            └─────────────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────────────────┐
+│                    WEEK 1 & 2: COMPLETE AI TUTOR PIPELINE                │
+└──────────────────────────────────────────────────────────────────────────┘
 
-                    ┌──────────────────────┐
-                    │   PDF Documents      │
-                    │   (Course Materials) │
-                    └──────────┬───────────┘
-                               │
-                               v
-                    ┌──────────────────────┐
-                    │ document_parser.py   │
-                    │ - PDF Loading        │
-                    │ - Text Chunking      │
-                    └──────────┬───────────┘
-                               │
-                               v
-                    ┌──────────────────────────────┐
-                    │ vector_store.py              │
-                    │ - Embedding Generation       │
-                    │   (GoogleGenerativeAI)       │
-                    │ - ChromaDB Storage           │
-                    └──────────┬───────────────────┘
-                               │
-                               v
-                    ┌──────────────────────────────┐
-                    │   ChromaDB                   │
-                    │   Vector Database            │
-                    │   (Stored Embeddings)        │
-                    └──────────────────────────────┘
+                          DATA INGESTION PHASE (WEEK 1)
+                          ════════════════════════════
+
+        ┌──────────────────────┐
+        │   PDF Documents      │
+        │   (Course Materials) │
+        └──────────┬───────────┘
+                   │
+                   v
+        ┌──────────────────────────────────┐
+        │  Week_1/document_parser.py       │
+        ├──────────────────────────────────┤
+        │  • PyPDFLoader (LangChain)       │
+        │  • Load PDF pages                │
+        │  • Verify file exists            │
+        └──────────┬───────────────────────┘
+                   │
+                   v
+        ┌──────────────────────────────────┐
+        │  RecursiveCharacterTextSplitter  │
+        ├──────────────────────────────────┤
+        │  • Chunk Size: 1000 chars        │
+        │  • Overlap: 200 chars            │
+        │  • Semantic splitting            │
+        └──────────┬───────────────────────┘
+                   │
+                   v
+        ┌──────────────────────────────────┐
+        │  Week_1/vector_store.py          │
+        ├──────────────────────────────────┤
+        │  • NomicOllamaEmbeddings         │
+        │    (wrapper for nomic-embed-text)│
+        │  • Add search prefixes           │
+        │  • Filter empty chunks           │
+        │  • Initialize Chroma Vector DB   │
+        └──────────┬───────────────────────┘
+                   │
+                   v
+        ┌──────────────────────────────────┐
+        │   ChromaDB Vector Database       │
+        ├──────────────────────────────────┤
+        │  • Persistent Storage            │
+        │  • Collection: ai_tutor_syllabus │
+        │  • Local Path: chroma_db/        │
+        │  • Embedded Document Vectors     │
+        └──────────────────────────────────┘
 
 
-                            ┌─────────────────────────────────────────────────────────────┐
-                            │         WEEK 2: RAG ENGINE & CORE API                      │
-                            └─────────────────────────────────────────────────────────────┘
+                       QUERY & RAG EXECUTION PHASE (WEEK 2)
+                       ══════════════════════════════════════
 
-    ┌──────────────────────┐                              ┌─────────────────────────┐
-    │  User Query/Chat     │──────────────────────────>  │   FastAPI Backend       │
-    │  Request             │        HTTP Request          │   (Week_2/main.py)      │
-    └──────────────────────┘                              ├─────────────────────────┤
-                                                          │  API Routes:            │
-                                                          │  - /chat                │
-                                                          │  - /ingest              │
-                                                          │  - /schemas             │
-                                                          └────────────┬────────────┘
-                                                                       │
-                                                                       v
-                                                          ┌─────────────────────────┐
-                                                          │   RAG Engine Core       │
-                                                          ├─────────────────────────┤
-                                                          │  1. Semantic Search     │
-                                                          │     (ChromaDB Query)    │
-                                                          │  2. Prompt Building     │
-                                                          │  3. LLM Generation      │
-                                                          │     (Gemini via LC)     │
-                                                          │  4. Response with       │
-                                                          │     Citations           │
-                                                          └────────────┬────────────┘
-                                                                       │
-                                                                       v
-                                                          ┌─────────────────────────┐
-                                                          │   LangChain Framework   │
-                                                          ├─────────────────────────┤
-                                                          │  - Vector Retriever     │
-                                                          │  - Prompt Templates     │
-                                                          │  - LLM Integration      │
-                                                          └────────────┬────────────┘
-                                                                       │
-                                                                       v
-                                                          ┌─────────────────────────┐
-                                                          │   Gemini LLM API        │
-                                                          │   (Google AI)           │
-                                                          └────────────┬────────────┘
-                                                                       │
-                                                                       v
-                                                          ┌─────────────────────────┐
-                                                          │   Generated Response    │
-                                                          │   + Source Citations    │
-                                                          └─────────────────────────┘
-                                                                       ^
-                                                                       │
-                                                                       │ Retrieves Context
-                                                                       │
-                                                          ┌─────────────────────────┐
-                                                          │    ChromaDB             │
-                                                          │    Vector Database      │
-                                                          │   (From Week 1)         │
-                                                          └─────────────────────────┘
+    ┌──────────────────────┐
+    │  User Query/Chat     │
+    │  Request             │
+    │  (from Frontend)     │
+    └──────────┬───────────┘
+               │
+               │ HTTP Request
+               v
+    ┌──────────────────────────────────────┐
+    │     FastAPI Backend                  │
+    │     (Week_2/main.py)                 │
+    ├──────────────────────────────────────┤
+    │  • CORS Middleware                   │
+    │  • Allow Frontend Origin             │
+    └──────────┬───────────────────────────┘
+               │
+               v
+    ┌──────────────────────────────────────┐
+    │     FastAPI Routes                   │
+    ├──────────────────────────────────────┤
+    │  • /chat (chat_router)               │
+    │  • /ingest                           │
+    │  • /health                           │
+    └──────────┬───────────────────────────┘
+               │
+               v
+    ┌──────────────────────────────────────┐
+    │  RAG Engine Core (Week_2/core/)      │
+    ├──────────────────────────────────────┤
+    │ Step 1: Query Embedding              │
+    │ Step 2: Vector Similarity Search     │
+    │         (ChromaDB Retrieval)         │
+    │ Step 3: Retrieve Context Chunks      │
+    │ Step 4: Prompt Construction          │
+    │ Step 5: LLM Generation               │
+    │ Step 6: Response + Citations         │
+    └──────────┬───────────────────────────┘
+               │
+               ├──────────────-──────────────┬──────────────┐
+               │                             │              │
+               v                             v              v
+    ┌──────────────────────┐  ┌──────────────────────┐  ┌──────────────────────┐
+    │ LangChain            │  │ ChromaDB             │  │ LLM API              │
+    │ Integration          │  │ Retriever            │  │ Integration          │
+    ├──────────────────────┤  ├──────────────────────┤  ├──────────────────────┤
+    │ • Vector Retriever   │  │ • Get Query          │  │ • LLM Instance       │
+    │ • Prompt Templates   │  │   Embeddings         │  │   (configurable)     │
+    │ • LLM Chain          │  │ • Similarity Search  │  │ • Prompt: Context +  │
+    │   Integration        │  │ • Return Top K       │  │   Query              │
+    │ • Streaming Support  │  │   Relevant Chunks    │  │ • Generate Response  │
+    └──────────┬───────────┘  └──────────┬───────────┘  └──────────┬───────────┘
+               │                         │                         │
+               └─────────────────────────┼─────────────────────────┘
+                                         │
+                                         v
+                        ┌────────────────────────────────┐
+                        │  Generated Response            │
+                        ├────────────────────────────────┤
+                        │  • Answer to User Query        │
+                        │  • Source Citations            │
+                        │  • Confidence/Metadata         │
+                        └────────────┬───────────────────┘
+                                     │
+                                     v
+                    ┌──────────────────────────────────┐
+                    │  HTTP Response to Frontend       │
+                    │  (Streamed or Complete Response) │
+                    └──────────────────────────────────┘
+```
+
+## Complete Data Flow
+
+```text
+PDF Input
+   │
+   ├─> [Document Parser] 
+   │   (PyPDFLoader)
+   │
+   ├─> [Text Chunking]
+   │   (RecursiveCharacterTextSplitter)
+   │
+   ├─> [Embedding Generation]
+   │   (NomicOllamaEmbeddings with search prefixes)
+   │
+   ├─> [Vector Storage]
+   │   (ChromaDB persistent database)
+   │
+   └─> [RAG Pipeline at Query Time]
+       │
+       ├─> Retrieve relevant chunks from ChromaDB
+       ├─> Build context-aware prompt with retrieved chunks
+       ├─> Send to LLM for generation
+       ├─> Attach source citations
+       └─> Return to user via FastAPI
 ```
 
 ## Component Overview
+
 - **Frontend:** Streamlit app for interactive UI (Student/Educator views, chat, quizzes)
-- **Backend:** FastAPI provides REST API for chat, ingestion, and quiz endpoints
-- **RAG Engine:** Retrieves context chunks from ChromaDB, constructs prompts, and uses Gemini LLM via LangChain
+- **Backend:** FastAPI with Uvicorn provides REST API for chat, ingestion, and quiz endpoints
+- **RAG Engine:** Retrieves context chunks from ChromaDB, constructs prompts, generates responses via LLM with LangChain
 - **Vector Database:** ChromaDB stores embedded document vectors and handles semantic search
-- **Data Ingestion:** Parsers PDF syllabus, splits text, computes embeddings (GoogleGenerativeAIEmbeddings), stores in ChromaDB
+- **Data Ingestion:** Parses PDF documents, splits text into chunks, computes embeddings with Ollama (nomic-embed-text), and persists in ChromaDB
+- **Embeddings:** NomicOllamaEmbeddings wrapper with search prefixes for optimal retrieval
 
 ## UPDATED TECH STACK
 
-Frontend:
+**Frontend:**
 - Streamlit
 
-Backend:
+**Backend:**
 - FastAPI
 - Uvicorn
 
-LLM:
-- Gemini API (Google AI)
+**LLM:**
+- Configurable (Gemini API or other LLMs via LangChain)
 
-Framework:
-- LangChain
+**Framework:**
+- LangChain (document loaders, retrievers, chains, integrations)
 
-Embeddings:
-- GoogleGenerativeAIEmbeddings
+**Embeddings:**
+- Ollama (nomic-embed-text model)
+- NomicOllamaEmbeddings (custom wrapper with search prefixes)
 
-Vector Database:
-- ChromaDB
+**Vector Database:**
+- ChromaDB (persistent local storage at `chroma_db/`)
 
-PDF Parsing:
-- PyPDFLoader
+**PDF Parsing:**
+- PyPDFLoader (from LangChain)
+
+**Text Splitting:**
+- RecursiveCharacterTextSplitter (1000 char chunks with 200 char overlap)
