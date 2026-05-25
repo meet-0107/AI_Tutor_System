@@ -3,14 +3,14 @@ from typing import List
 from dotenv import load_dotenv
 from langchain_core.documents import Document
 from langchain_ollama import OllamaEmbeddings
-from langchain_chroma import Chroma 
+from pinecone import Pinecone, ServerlessSpec
+from langchain_pinecone import Pinecone as PineconeVectorStore
 
-# # Load environment variables (specifically GOOGLE_API_KEY from your .env file)
-# load_dotenv()
+# Load environment variables
+load_dotenv()
 
-# Define where the local database will be saved
-CHROMA_PATH = "chroma_db"
-COLLECTION_NAME = "ai_tutor_syllabus"
+# Define Pinecone index name
+INDEX_NAME = "ai-tutor-syllabus"
 
 class NomicOllamaEmbeddings(OllamaEmbeddings):
     """
@@ -18,22 +18,42 @@ class NomicOllamaEmbeddings(OllamaEmbeddings):
     Nomic Embed Text requires specific prefixes for search queries and documents.
     """
     def embed_documents(self, texts: List[str]) -> List[List[float]]:
-        # Add the 'search_document: ' prefix to each document chunk
         prefixed_texts = [f"search_document: {text}" for text in texts]
         return super().embed_documents(prefixed_texts)
 
     def embed_query(self, text: str) -> List[float]:
-        # Add the 'search_query: ' prefix to the query
         prefixed_text = f"search_query: {text}"
         return super().embed_query(prefixed_text)
 
-def create_vector_store(chunks: List[Document]) -> Chroma:
+def _init_pinecone_index():
     """
-    Embeds document chunks using Gemini and saves them in a local, persistent ChromaDB.
+    Initializes the Pinecone client and creates the index if it doesn't exist.
     """
-    # Removed Google API Key verification as we're using local HuggingFace embeddings
+    api_key = os.environ.get("PINECONE_API_KEY")
+    if not api_key:
+        raise ValueError("PINECONE_API_KEY environment variable is not set.")
+    
+    pc = Pinecone(api_key=api_key)
+    
+    # Create the index if it does not exist
+    if INDEX_NAME not in pc.list_indexes().names():
+        print(f"Creating new Pinecone index: '{INDEX_NAME}'...")
+        pc.create_index(
+            name=INDEX_NAME,
+            dimension=768, # Dimension for nomic-embed-text
+            metric='cosine',
+            spec=ServerlessSpec(
+                cloud='aws',
+                region='us-east-1'
+            )
+        )
+    return pc
 
-    # --- BUG FIX: Filter out empty or whitespace-only chunks ---
+def create_vector_store(chunks: List[Document]) -> PineconeVectorStore:
+    """
+    Embeds document chunks using Nomic and saves them in a cloud Pinecone Vector Database.
+    """
+    # Filter out empty or whitespace-only chunks
     valid_chunks = []
     for chunk in chunks:
         if chunk.page_content and chunk.page_content.strip():
@@ -44,51 +64,36 @@ def create_vector_store(chunks: List[Document]) -> Chroma:
     if not valid_chunks:
         raise ValueError("No valid text chunks remained after filtering empty content. Cannot build vector store.")
 
-    # Clear existing vector store collection if it exists to avoid dimension mismatches/conflicts
-    if os.path.exists(CHROMA_PATH):
-        print(f"Clearing existing collection '{COLLECTION_NAME}' in database at '{CHROMA_PATH}' to prevent conflicts...")
-        import chromadb
-        try:
-            client = chromadb.PersistentClient(path=CHROMA_PATH)
-            client.delete_collection(COLLECTION_NAME)
-            print("Collection successfully cleared!")
-        except ValueError:
-            # Collection doesn't exist, which is fine
-            pass
-        except Exception as e:
-            print(f"Warning: Could not clear existing collection: {e}")
+    # Initialize Pinecone and create index if missing
+    _init_pinecone_index()
 
     print("Initializing Ollama Embeddings with Nomic prefixes (nomic-embed-text)...")
     embeddings = NomicOllamaEmbeddings(model="nomic-embed-text")
 
-    print(f"Embedding {len(valid_chunks)} chunks and saving to local database at '{CHROMA_PATH}'...")
+    print(f"Embedding {len(valid_chunks)} chunks and saving to Pinecone index '{INDEX_NAME}'...")
     
-    # 2. Create and persist the vector database safely
     try:
-        vector_store = Chroma.from_documents(
+        vector_store = PineconeVectorStore.from_documents(
             documents=valid_chunks,
             embedding=embeddings,
-            persist_directory=CHROMA_PATH,
-            collection_name=COLLECTION_NAME
+            index_name=INDEX_NAME
         )
-        print("Vector store successfully built and saved to disk!")
+        print("Vector store successfully built and saved to Pinecone!")
         return vector_store
     except Exception as inner_e:
-        # Catch explicit internal engine errors for clearer debugging
-        print(f"Internal Chroma/Embedding mapping failed. Raw error details: {inner_e}")
+        print(f"Internal Pinecone/Embedding mapping failed. Raw error details: {inner_e}")
         raise inner_e
 
-def get_vector_store() -> Chroma:
+def get_vector_store() -> PineconeVectorStore:
     """
-    Loads the existing local ChromaDB instance for querying.
+    Loads the existing Pinecone instance for querying.
     """
+    _init_pinecone_index() # Ensure index exists before querying
     embeddings = NomicOllamaEmbeddings(model="nomic-embed-text")
-    return Chroma(
-        persist_directory=CHROMA_PATH,
-        embedding_function=embeddings,
-        collection_name=COLLECTION_NAME
+    return PineconeVectorStore(
+        index_name=INDEX_NAME,
+        embedding=embeddings
     )
-
 
 # --- Testing the pipeline locally ---
 if __name__ == "__main__":
@@ -107,7 +112,6 @@ if __name__ == "__main__":
             print("--- Starting Document Ingestion Pipeline ---")
             all_chunks = []
             
-            # Loop through all files in the data_samples directory
             for filename in os.listdir(data_samples_dir):
                 if filename.lower().endswith(".pdf"):
                     pdf_path = os.path.join(data_samples_dir, filename)
@@ -117,7 +121,7 @@ if __name__ == "__main__":
             
             if all_chunks:
                 db = create_vector_store(all_chunks)
-                print("\nPipeline Test Complete. Check your project root for the 'chroma_db' folder.")
+                print("\nPipeline Test Complete. Check your Pinecone dashboard to verify.")
             else:
                 print("\nNo valid PDF chunks were found in the data_samples folder.")
         except Exception as e:

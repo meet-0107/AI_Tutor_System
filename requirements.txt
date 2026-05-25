@@ -1,10 +1,10 @@
 fastapi 
 uvicorn
 langchain
-chromadb
+pinecone
 streamlit
-langchain-chroma
-langchain-google-genai
+langchain-pinecone
+langchain-ollama
 # PyPDFLoader
 langchain-community
 langchain-core

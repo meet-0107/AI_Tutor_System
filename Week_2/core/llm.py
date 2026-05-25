@@ -1,22 +1,18 @@
 import os
 from dotenv import load_dotenv
-from langchain_google_genai import ChatGoogleGenerativeAI
+from langchain_ollama import ChatOllama
 
 load_dotenv()
 
-def get_llm() -> ChatGoogleGenerativeAI:
+def get_llm() -> ChatOllama:
     """
-    Initializes and returns the Gemini Chat Model.
-    Temperature is set to 0 to minimize hallucinations.
+    Initializes and returns the local Ollama Chat Model (Phi3).
+    Temperature is set to 0.1 to minimize hallucinations.
     """
-    if not os.environ.get("GOOGLE_API_KEY"):
-        raise ValueError("GOOGLE_API_KEY not found in .env file.")
-        
-    # We use gemini-2.5-flash as it is highly performant and cost-effective 
+    # We use phi3 running locally on Ollama as it is highly performant and memory-efficient 
     # for processing large blocks of retrieved text context.
-    llm = ChatGoogleGenerativeAI(
-        model="gemini-3.5-flash",
-        temperature=0.1,
-        max_tokens=1024,
+    llm = ChatOllama(
+        model="phi3",
+        temperature=0.1
     )
     return llm

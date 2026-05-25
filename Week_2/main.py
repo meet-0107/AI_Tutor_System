@@ -3,6 +3,12 @@ from fastapi.middleware.cors import CORSMiddleware
 from api.routers.chat import router as chat_router
 from api.routers.ingest import router as ingest_router
 
+# Add Week 3 Quiz Router
+import sys
+import os
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+from Week_3.api.routers.quiz import router as quiz_router
+
 app = FastAPI(
     title="Generative AI Tutor API",
     description="Backend API for the EdTech Adaptive Learning Platform",
@@ -21,6 +27,7 @@ app.add_middleware(
 # Include the routers
 app.include_router(chat_router)
 app.include_router(ingest_router)
+app.include_router(quiz_router)
 
 @app.get("/health")
 def health_check():

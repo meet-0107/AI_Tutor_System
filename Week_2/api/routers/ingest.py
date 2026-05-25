@@ -18,7 +18,7 @@ router = APIRouter(
 @router.post("/", response_model=IngestResponse)
 async def ingest_file(file: UploadFile = File(...)):
     """
-    Upload a syllabus PDF, parse it into chunks, and store the embeddings in ChromaDB.
+    Upload a syllabus PDF, parse it into chunks, and store the embeddings in Pinecone.
     """
     if not file.filename.endswith(".pdf"):
         raise HTTPException(status_code=400, detail="Only PDF files are supported.")
