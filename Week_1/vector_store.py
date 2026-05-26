@@ -2,8 +2,6 @@ import os
 from typing import List
 from dotenv import load_dotenv
 from langchain_core.documents import Document
-from pinecone import Pinecone, ServerlessSpec
-from langchain_pinecone import Pinecone as PineconeVectorStore
 from langchain_core.embeddings import Embeddings
 from langchain.embeddings import init_embeddings
 from langchain_core.vectorstores import VectorStore
@@ -12,9 +10,16 @@ from langchain_core.vectorstores import VectorStore
 load_dotenv()
 
 # Define centralized vector store settings
-VECTOR_STORE_PROVIDER = os.getenv("VECTOR_STORE_PROVIDER", "pinecone").lower().strip()
-INDEX_NAME = os.getenv("VECTOR_STORE_INDEX_NAME", "ai-tutor-syllabus").strip()
-CHROMA_PERSIST_DIR = os.getenv("CHROMA_PERSIST_DIRECTORY", "chroma_db").strip()
+VECTOR_STORE_PROVIDER = os.getenv("VECTOR_STORE_PROVIDER")
+if VECTOR_STORE_PROVIDER:
+    VECTOR_STORE_PROVIDER = VECTOR_STORE_PROVIDER.lower().strip()
+
+INDEX_NAME = os.getenv("VECTOR_STORE_INDEX_NAME")
+if INDEX_NAME:
+    INDEX_NAME = INDEX_NAME.strip()
+
+chroma_dir = os.getenv("CHROMA_PERSIST_DIRECTORY")
+CHROMA_PERSIST_DIR = chroma_dir.strip() if chroma_dir else None
 
 def get_embeddings() -> Embeddings:
     """
@@ -30,44 +35,46 @@ def get_embeddings() -> Embeddings:
         provider=provider
     )
 
-def _init_pinecone_index(embeddings: Embeddings):
+def _init_index(embeddings: Embeddings):
     """
-    Initializes the Pinecone client and creates the index if it doesn't exist.
+    Initializes the cloud index if using Pinecone.
     Automatically handles index recreation if there's a dimension mismatch.
     """
-    api_key = os.environ.get("PINECONE_API_KEY")
-    if not api_key:
-        raise ValueError("PINECONE_API_KEY environment variable is not set.")
-    
-    pc = Pinecone(api_key=api_key)
-    
-    # Determine the target dimension dynamically
-    print("Determining embedding model dimension dynamically...")
-    dummy_vector = embeddings.embed_query("dimension_test")
-    dimension = len(dummy_vector)
-    
-    # Check if the index already exists and verify its dimension
-    if INDEX_NAME in pc.list_indexes().names():
-        desc = pc.describe_index(INDEX_NAME)
-        if desc.dimension != dimension:
-            print(f"Warning: Found existing Pinecone index '{INDEX_NAME}' with dimension {desc.dimension}, "
-                  f"but the configured embedding model requires {dimension} dimensions.")
-            print(f"Deleting the incompatible index '{INDEX_NAME}' to recreate it...")
-            pc.delete_index(INDEX_NAME)
-            
-    # Create the index if it does not exist (or if it was just deleted)
-    if INDEX_NAME not in pc.list_indexes().names():
-        print(f"Creating new Pinecone index: '{INDEX_NAME}' with dimension {dimension}...")
-        pc.create_index(
-            name=INDEX_NAME,
-            dimension=dimension,
-            metric='cosine',
-            spec=ServerlessSpec(
-                cloud='aws',
-                region='us-east-1'
+    if VECTOR_STORE_PROVIDER == "pinecone":
+        from pinecone import Pinecone, ServerlessSpec
+        
+        api_key = os.environ.get("PINECONE_API_KEY")
+        if not api_key:
+            raise ValueError("PINECONE_API_KEY environment variable is not set.")
+        
+        pc = Pinecone(api_key=api_key)
+        
+        # Determine the target dimension dynamically
+        print("Determining embedding model dimension dynamically...")
+        dummy_vector = embeddings.embed_query("dimension_test")
+        dimension = len(dummy_vector)
+        
+        # Check if the index already exists and verify its dimension
+        if INDEX_NAME in pc.list_indexes().names():
+            desc = pc.describe_index(INDEX_NAME)
+            if desc.dimension != dimension:
+                print(f"Warning: Found existing index '{INDEX_NAME}' with dimension {desc.dimension}, "
+                      f"but the configured embedding model requires {dimension} dimensions.")
+                print(f"Deleting the incompatible index '{INDEX_NAME}' to recreate it...")
+                pc.delete_index(INDEX_NAME)
+                
+        # Create the index if it does not exist (or if it was just deleted)
+        if INDEX_NAME not in pc.list_indexes().names():
+            print(f"Creating new index: '{INDEX_NAME}' with dimension {dimension}...")
+            pc.create_index(
+                name=INDEX_NAME,
+                dimension=dimension,
+                metric='cosine',
+                spec=ServerlessSpec(
+                    cloud='aws',
+                    region='us-east-1'
+                )
             )
-        )
-    return pc
 
 def create_vector_store(chunks: List[Document]) -> VectorStore:
     """
@@ -91,15 +98,17 @@ def create_vector_store(chunks: List[Document]) -> VectorStore:
     
     try:
         if VECTOR_STORE_PROVIDER == "pinecone":
-            # Initialize Pinecone index
-            _init_pinecone_index(embeddings)
+            from langchain_pinecone import Pinecone as PineconeVectorStore
+            
+            # Initialize index
+            _init_index(embeddings)
             print(f"Embedding {len(valid_chunks)} chunks and saving to Pinecone index '{INDEX_NAME}'...")
             vector_store = PineconeVectorStore.from_documents(
                 documents=valid_chunks,
                 embedding=embeddings,
                 index_name=INDEX_NAME
             )
-            print("Vector store successfully built and saved to Pinecone!")
+            print("Vector store successfully built!")
             return vector_store
             
         elif VECTOR_STORE_PROVIDER == "chroma":
@@ -111,7 +120,7 @@ def create_vector_store(chunks: List[Document]) -> VectorStore:
                 persist_directory=CHROMA_PERSIST_DIR,
                 collection_name=INDEX_NAME
             )
-            print("Vector store successfully built and saved to Chroma!")
+            print("Vector store successfully built!")
             return vector_store
             
         else:
@@ -128,7 +137,8 @@ def get_vector_store() -> VectorStore:
     embeddings = get_embeddings()
     
     if VECTOR_STORE_PROVIDER == "pinecone":
-        _init_pinecone_index(embeddings) # Ensure index exists
+        from langchain_pinecone import Pinecone as PineconeVectorStore
+        _init_index(embeddings) # Ensure index exists
         return PineconeVectorStore(
             index_name=INDEX_NAME,
             embedding=embeddings
