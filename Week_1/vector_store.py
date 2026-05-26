@@ -6,28 +6,13 @@ from pinecone import Pinecone, ServerlessSpec
 from langchain_pinecone import Pinecone as PineconeVectorStore
 from langchain_core.embeddings import Embeddings
 from langchain.embeddings import init_embeddings
+from langchain_core.vectorstores import VectorStore
 
 # Load environment variables
 load_dotenv()
 
-# Define Pinecone index name
-INDEX_NAME = "ai-tutor-syllabus"
-
-class NomicPrefixEmbeddings(Embeddings):
-    """
-    Wrapper for wrapping any embedding model (like nomic-embed-text) 
-    to add search_document: and search_query: prefixes required by Nomic.
-    """
-    def __init__(self, base_embeddings: Embeddings):
-        self.base_embeddings = base_embeddings
-
-    def embed_documents(self, texts: List[str]) -> List[List[float]]:
-        prefixed_texts = [f"search_document: {text}" for text in texts]
-        return self.base_embeddings.embed_documents(prefixed_texts)
-
-    def embed_query(self, text: str) -> List[float]:
-        prefixed_text = f"search_query: {text}"
-        return self.base_embeddings.embed_query(prefixed_text)
+# Define centralized vector store settings
+INDEX_NAME = os.getenv("VECTOR_STORE_INDEX_NAME", "ai-tutor-syllabus").strip()
 
 def get_embeddings() -> Embeddings:
     """
@@ -38,16 +23,10 @@ def get_embeddings() -> Embeddings:
     model_name = os.getenv("EMBEDDING_MODEL").strip()
 
     # Dynamically initialize any supported LangChain embedding model
-    base_embeddings = init_embeddings(
+    return init_embeddings(
         model=model_name,
         provider=provider
     )
-
-    # Wrap with Nomic prefixes if using nomic-embed-text
-    if "nomic-embed-text" in model_name.lower():
-        return NomicPrefixEmbeddings(base_embeddings)
-        
-    return base_embeddings
 
 def _init_pinecone_index(embeddings: Embeddings):
     """
@@ -88,9 +67,9 @@ def _init_pinecone_index(embeddings: Embeddings):
         )
     return pc
 
-def create_vector_store(chunks: List[Document]) -> PineconeVectorStore:
+def create_vector_store(chunks: List[Document]) -> VectorStore:
     """
-    Embeds document chunks using configured embedding model and saves them in a cloud Pinecone Vector Database.
+    Embeds document chunks and saves them in the centralized Pinecone Vector Database.
     """
     # Filter out empty or whitespace-only chunks
     valid_chunks = []
@@ -105,13 +84,11 @@ def create_vector_store(chunks: List[Document]) -> PineconeVectorStore:
 
     # Initialize dynamic embeddings
     embeddings = get_embeddings()
-
-    # Initialize Pinecone and create index if missing (passing embeddings to determine dimension)
-    _init_pinecone_index(embeddings)
-
-    print(f"Embedding {len(valid_chunks)} chunks and saving to Pinecone index '{INDEX_NAME}'...")
     
     try:
+        # Initialize Pinecone index
+        _init_pinecone_index(embeddings)
+        print(f"Embedding {len(valid_chunks)} chunks and saving to Pinecone index '{INDEX_NAME}'...")
         vector_store = PineconeVectorStore.from_documents(
             documents=valid_chunks,
             embedding=embeddings,
@@ -119,16 +96,17 @@ def create_vector_store(chunks: List[Document]) -> PineconeVectorStore:
         )
         print("Vector store successfully built and saved to Pinecone!")
         return vector_store
-    except Exception as inner_e:
-        print(f"Internal Pinecone/Embedding mapping failed. Raw error details: {inner_e}")
-        raise inner_e
+            
+    except Exception as e:
+        print(f"Failed to create vector store: {e}")
+        raise e
 
-def get_vector_store() -> PineconeVectorStore:
+def get_vector_store() -> VectorStore:
     """
-    Loads the existing Pinecone instance for querying.
+    Loads the configured centralized Pinecone Vector Database instance for querying.
     """
     embeddings = get_embeddings()
-    _init_pinecone_index(embeddings) # Ensure index exists before querying
+    _init_pinecone_index(embeddings) # Ensure index exists
     return PineconeVectorStore(
         index_name=INDEX_NAME,
         embedding=embeddings
