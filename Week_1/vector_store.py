@@ -12,7 +12,9 @@ from langchain_core.vectorstores import VectorStore
 load_dotenv()
 
 # Define centralized vector store settings
+VECTOR_STORE_PROVIDER = os.getenv("VECTOR_STORE_PROVIDER", "pinecone").lower().strip()
 INDEX_NAME = os.getenv("VECTOR_STORE_INDEX_NAME", "ai-tutor-syllabus").strip()
+CHROMA_PERSIST_DIR = os.getenv("CHROMA_PERSIST_DIRECTORY", "chroma_db").strip()
 
 def get_embeddings() -> Embeddings:
     """
@@ -69,7 +71,7 @@ def _init_pinecone_index(embeddings: Embeddings):
 
 def create_vector_store(chunks: List[Document]) -> VectorStore:
     """
-    Embeds document chunks and saves them in the centralized Pinecone Vector Database.
+    Embeds document chunks and saves them in the centralized Vector Database configured in .env.
     """
     # Filter out empty or whitespace-only chunks
     valid_chunks = []
@@ -84,18 +86,36 @@ def create_vector_store(chunks: List[Document]) -> VectorStore:
 
     # Initialize dynamic embeddings
     embeddings = get_embeddings()
+
+    print(f"Using vector store provider: '{VECTOR_STORE_PROVIDER}'")
     
     try:
-        # Initialize Pinecone index
-        _init_pinecone_index(embeddings)
-        print(f"Embedding {len(valid_chunks)} chunks and saving to Pinecone index '{INDEX_NAME}'...")
-        vector_store = PineconeVectorStore.from_documents(
-            documents=valid_chunks,
-            embedding=embeddings,
-            index_name=INDEX_NAME
-        )
-        print("Vector store successfully built and saved to Pinecone!")
-        return vector_store
+        if VECTOR_STORE_PROVIDER == "pinecone":
+            # Initialize Pinecone index
+            _init_pinecone_index(embeddings)
+            print(f"Embedding {len(valid_chunks)} chunks and saving to Pinecone index '{INDEX_NAME}'...")
+            vector_store = PineconeVectorStore.from_documents(
+                documents=valid_chunks,
+                embedding=embeddings,
+                index_name=INDEX_NAME
+            )
+            print("Vector store successfully built and saved to Pinecone!")
+            return vector_store
+            
+        elif VECTOR_STORE_PROVIDER == "chroma":
+            from langchain_chroma import Chroma
+            print(f"Embedding {len(valid_chunks)} chunks and saving to Chroma collection '{INDEX_NAME}' at '{CHROMA_PERSIST_DIR}'...")
+            vector_store = Chroma.from_documents(
+                documents=valid_chunks,
+                embedding=embeddings,
+                persist_directory=CHROMA_PERSIST_DIR,
+                collection_name=INDEX_NAME
+            )
+            print("Vector store successfully built and saved to Chroma!")
+            return vector_store
+            
+        else:
+            raise ValueError(f"Unsupported VECTOR_STORE_PROVIDER '{VECTOR_STORE_PROVIDER}' configured in .env.")
             
     except Exception as e:
         print(f"Failed to create vector store: {e}")
@@ -103,14 +123,25 @@ def create_vector_store(chunks: List[Document]) -> VectorStore:
 
 def get_vector_store() -> VectorStore:
     """
-    Loads the configured centralized Pinecone Vector Database instance for querying.
+    Loads the configured centralized Vector Database instance for querying.
     """
     embeddings = get_embeddings()
-    _init_pinecone_index(embeddings) # Ensure index exists
-    return PineconeVectorStore(
-        index_name=INDEX_NAME,
-        embedding=embeddings
-    )
+    
+    if VECTOR_STORE_PROVIDER == "pinecone":
+        _init_pinecone_index(embeddings) # Ensure index exists
+        return PineconeVectorStore(
+            index_name=INDEX_NAME,
+            embedding=embeddings
+        )
+    elif VECTOR_STORE_PROVIDER == "chroma":
+        from langchain_chroma import Chroma
+        return Chroma(
+            persist_directory=CHROMA_PERSIST_DIR,
+            embedding_function=embeddings,
+            collection_name=INDEX_NAME
+        )
+    else:
+        raise ValueError(f"Unsupported VECTOR_STORE_PROVIDER '{VECTOR_STORE_PROVIDER}' configured in .env.")
 
 # --- Testing the pipeline locally ---
 if __name__ == "__main__":
@@ -138,7 +169,7 @@ if __name__ == "__main__":
             
             if all_chunks:
                 db = create_vector_store(all_chunks)
-                print("\nPipeline Test Complete. Check your Pinecone dashboard to verify.")
+                print(f"\nPipeline Test Complete. Check your {VECTOR_STORE_PROVIDER} dashboard/directory to verify.")
             else:
                 print("\nNo valid PDF chunks were found in the data_samples folder.")
         except Exception as e:
