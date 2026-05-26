@@ -1,10 +1,5 @@
-import sys
-import os
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
-
-from Week_2.core.llm import get_llm
-from Week_2.core.prompts import get_tutor_prompt
-from Week_1.vector_store import get_vector_store
+from Week_2 import get_llm, get_tutor_prompt
+from Week_1 import get_vector_store
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.runnables import RunnablePassthrough
 

@@ -1,12 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from api.routers.chat import router as chat_router
-from api.routers.ingest import router as ingest_router
-
-# Add Week 3 Quiz Router
-import sys
-import os
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+from Week_2.api.routers.chat import router as chat_router
+from Week_2.api.routers.ingest import router as ingest_router
 from Week_3.api.routers.quiz import router as quiz_router
 
 app = FastAPI(
@@ -36,5 +31,5 @@ def health_check():
 
 if __name__ == "__main__":
     import uvicorn
-    # This block allows you to run the file directly via `python main.py`
-    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
+    # This block allows you to run the file directly
+    uvicorn.run("Week_2.main:app", host="0.0.0.0", port=8000, reload=True)

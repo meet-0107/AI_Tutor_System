@@ -1,14 +1,8 @@
 import os
 import shutil
-import sys
 from fastapi import APIRouter, UploadFile, File, HTTPException
-from api.schemas.api_models import IngestResponse
-
-# Ensure root is in sys.path
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', '..')))
-
-from Week_1.document_parser import load_and_chunk_pdf
-from Week_1.vector_store import create_vector_store
+from Week_2.api.schemas.api_models import IngestResponse
+from Week_1 import load_and_chunk_pdf, create_vector_store
 
 router = APIRouter(
     prefix="/ingest",

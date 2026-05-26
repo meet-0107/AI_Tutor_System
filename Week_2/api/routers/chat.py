@@ -1,11 +1,7 @@
 from fastapi import APIRouter, HTTPException
-from api.schemas.api_models import ChatRequest, ChatResponse
-from core.rag import get_rag_chain
-
-import sys
-import os
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', '..')))
-from Week_3.core.memory import get_rag_chain_with_memory
+from Week_2.api.schemas.api_models import ChatRequest, ChatResponse
+from Week_2 import get_rag_chain
+from Week_3 import get_rag_chain_with_memory
 
 router = APIRouter(
     prefix="/chat",

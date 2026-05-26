@@ -1,10 +1,6 @@
-import sys
-import os
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', '..')))
-
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
-from Week_3.core.quiz_engine import generate_quiz
+from Week_3 import generate_quiz
 
 router = APIRouter(
     prefix="/quiz",
