@@ -6,20 +6,14 @@ from langchain_core.embeddings import Embeddings
 from langchain.embeddings import init_embeddings
 from langchain_core.vectorstores import VectorStore
 
+
 # Load environment variables
 load_dotenv()
 
 # Define centralized vector store settings
-VECTOR_STORE_PROVIDER = os.getenv("VECTOR_STORE_PROVIDER")
-if VECTOR_STORE_PROVIDER:
-    VECTOR_STORE_PROVIDER = VECTOR_STORE_PROVIDER.lower().strip()
-
 INDEX_NAME = os.getenv("VECTOR_STORE_INDEX_NAME")
 if INDEX_NAME:
     INDEX_NAME = INDEX_NAME.strip()
-
-chroma_dir = os.getenv("CHROMA_PERSIST_DIRECTORY")
-CHROMA_PERSIST_DIR = chroma_dir.strip() if chroma_dir else None
 
 def get_embeddings() -> Embeddings:
     """
@@ -37,44 +31,45 @@ def get_embeddings() -> Embeddings:
 
 def _init_index(embeddings: Embeddings):
     """
-    Initializes the cloud index if using Pinecone.
+    Initializes the cloud index for the centralized vector database.
     Automatically handles index recreation if there's a dimension mismatch.
     """
-    if VECTOR_STORE_PROVIDER == "pinecone":
-        from pinecone import Pinecone, ServerlessSpec
-        
-        api_key = os.environ.get("PINECONE_API_KEY")
-        if not api_key:
-            raise ValueError("PINECONE_API_KEY environment variable is not set.")
-        
-        pc = Pinecone(api_key=api_key)
-        
-        # Determine the target dimension dynamically
-        print("Determining embedding model dimension dynamically...")
-        dummy_vector = embeddings.embed_query("dimension_test")
-        dimension = len(dummy_vector)
-        
-        # Check if the index already exists and verify its dimension
-        if INDEX_NAME in pc.list_indexes().names():
-            desc = pc.describe_index(INDEX_NAME)
-            if desc.dimension != dimension:
-                print(f"Warning: Found existing index '{INDEX_NAME}' with dimension {desc.dimension}, "
-                      f"but the configured embedding model requires {dimension} dimensions.")
-                print(f"Deleting the incompatible index '{INDEX_NAME}' to recreate it...")
-                pc.delete_index(INDEX_NAME)
-                
-        # Create the index if it does not exist (or if it was just deleted)
-        if INDEX_NAME not in pc.list_indexes().names():
-            print(f"Creating new index: '{INDEX_NAME}' with dimension {dimension}...")
-            pc.create_index(
-                name=INDEX_NAME,
-                dimension=dimension,
-                metric='cosine',
-                spec=ServerlessSpec(
-                    cloud='aws',
-                    region='us-east-1'
-                )
+    if not INDEX_NAME:
+        raise ValueError("VECTOR_STORE_INDEX_NAME environment variable is not set.")
+
+    api_key = os.getenv("PINECONE_API_KEY")
+    if not api_key:
+        raise ValueError("PINECONE_API_KEY environment variable is not set.")
+    
+    from pinecone import Pinecone, ServerlessSpec
+    pc = Pinecone(api_key=api_key)
+    
+    # Determine the target dimension dynamically
+    print("Determining embedding model dimension dynamically...")
+    dummy_vector = embeddings.embed_query("dimension_test")
+    dimension = len(dummy_vector)
+    
+    # Check if the index already exists and verify its dimension
+    if INDEX_NAME in pc.list_indexes().names():
+        desc = pc.describe_index(INDEX_NAME)
+        if desc.dimension != dimension:
+            print(f"Warning: Found existing index '{INDEX_NAME}' with dimension {desc.dimension}, "
+                  f"but the configured embedding model requires {dimension} dimensions.")
+            print(f"Deleting the incompatible index '{INDEX_NAME}' to recreate it...")
+            pc.delete_index(INDEX_NAME)
+            
+    # Create the index if it does not exist (or if it was just deleted)
+    if INDEX_NAME not in pc.list_indexes().names():
+        print(f"Creating new index: '{INDEX_NAME}' with dimension {dimension}...")
+        pc.create_index(
+            name=INDEX_NAME,
+            dimension=dimension,
+            metric='cosine',
+            spec=ServerlessSpec(
+                cloud='aws',
+                region='us-east-1'
             )
+        )
 
 def create_vector_store(chunks: List[Document]) -> VectorStore:
     """
@@ -94,37 +89,20 @@ def create_vector_store(chunks: List[Document]) -> VectorStore:
     # Initialize dynamic embeddings
     embeddings = get_embeddings()
 
-    print(f"Using vector store provider: '{VECTOR_STORE_PROVIDER}'")
+    print(f"Using centralized vector store index: '{INDEX_NAME}'")
     
     try:
-        if VECTOR_STORE_PROVIDER == "pinecone":
-            from langchain_pinecone import Pinecone as PineconeVectorStore
-            
-            # Initialize index
-            _init_index(embeddings)
-            print(f"Embedding {len(valid_chunks)} chunks and saving to Pinecone index '{INDEX_NAME}'...")
-            vector_store = PineconeVectorStore.from_documents(
-                documents=valid_chunks,
-                embedding=embeddings,
-                index_name=INDEX_NAME
-            )
-            print("Vector store successfully built!")
-            return vector_store
-            
-        elif VECTOR_STORE_PROVIDER == "chroma":
-            from langchain_chroma import Chroma
-            print(f"Embedding {len(valid_chunks)} chunks and saving to Chroma collection '{INDEX_NAME}' at '{CHROMA_PERSIST_DIR}'...")
-            vector_store = Chroma.from_documents(
-                documents=valid_chunks,
-                embedding=embeddings,
-                persist_directory=CHROMA_PERSIST_DIR,
-                collection_name=INDEX_NAME
-            )
-            print("Vector store successfully built!")
-            return vector_store
-            
-        else:
-            raise ValueError(f"Unsupported VECTOR_STORE_PROVIDER '{VECTOR_STORE_PROVIDER}' configured in .env.")
+        # Initialize index
+        _init_index(embeddings)
+        print(f"Embedding {len(valid_chunks)} chunks and saving to index '{INDEX_NAME}'...")
+        from langchain_pinecone import Pinecone as PineconeVectorStore
+        vector_store = PineconeVectorStore.from_documents(
+            documents=valid_chunks,
+            embedding=embeddings,
+            index_name=INDEX_NAME
+        )
+        print("Vector store successfully built!")
+        return vector_store
             
     except Exception as e:
         print(f"Failed to create vector store: {e}")
@@ -134,24 +112,17 @@ def get_vector_store() -> VectorStore:
     """
     Loads the configured centralized Vector Database instance for querying.
     """
+    if not INDEX_NAME:
+        raise ValueError("VECTOR_STORE_INDEX_NAME environment variable is not set.")
+
     embeddings = get_embeddings()
-    
-    if VECTOR_STORE_PROVIDER == "pinecone":
-        from langchain_pinecone import Pinecone as PineconeVectorStore
-        _init_index(embeddings) # Ensure index exists
-        return PineconeVectorStore(
-            index_name=INDEX_NAME,
-            embedding=embeddings
-        )
-    elif VECTOR_STORE_PROVIDER == "chroma":
-        from langchain_chroma import Chroma
-        return Chroma(
-            persist_directory=CHROMA_PERSIST_DIR,
-            embedding_function=embeddings,
-            collection_name=INDEX_NAME
-        )
-    else:
-        raise ValueError(f"Unsupported VECTOR_STORE_PROVIDER '{VECTOR_STORE_PROVIDER}' configured in .env.")
+    _init_index(embeddings) # Ensure index exists
+    from langchain_pinecone import Pinecone as PineconeVectorStore
+    return PineconeVectorStore(
+        index_name=INDEX_NAME,
+        embedding=embeddings
+    )
+
 
 # --- Testing the pipeline locally ---
 if __name__ == "__main__":
@@ -179,7 +150,7 @@ if __name__ == "__main__":
             
             if all_chunks:
                 db = create_vector_store(all_chunks)
-                print(f"\nPipeline Test Complete. Check your {VECTOR_STORE_PROVIDER} dashboard/directory to verify.")
+                print("\nPipeline Test Complete. Check your vector database dashboard to verify.")
             else:
                 print("\nNo valid PDF chunks were found in the data_samples folder.")
         except Exception as e:

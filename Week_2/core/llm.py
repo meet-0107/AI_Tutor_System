@@ -12,7 +12,8 @@ def get_llm() -> BaseChatModel:
     """
     provider = os.getenv("LLM_PROVIDER").lower().strip()
     model_name = os.getenv("LLM_MODEL").strip()
-    temperature = float(os.getenv("LLM_TEMPERATURE"))
+    temp_env = os.getenv("LLM_TEMPERATURE")
+    temperature = float(temp_env) if temp_env else 0.7
 
     # Dynamically load and initialize the model using LangChain's unified interface
     return init_chat_model(
