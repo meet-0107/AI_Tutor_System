@@ -2,9 +2,10 @@ import os
 from typing import List
 from dotenv import load_dotenv
 from langchain_core.documents import Document
-from langchain_ollama import OllamaEmbeddings
 from pinecone import Pinecone, ServerlessSpec
 from langchain_pinecone import Pinecone as PineconeVectorStore
+from langchain_core.embeddings import Embeddings
+from langchain.embeddings import init_embeddings
 
 # Load environment variables
 load_dotenv()
@@ -12,22 +13,46 @@ load_dotenv()
 # Define Pinecone index name
 INDEX_NAME = "ai-tutor-syllabus"
 
-class NomicOllamaEmbeddings(OllamaEmbeddings):
+class NomicPrefixEmbeddings(Embeddings):
     """
-    Custom wrapper for OllamaEmbeddings using nomic-embed-text.
-    Nomic Embed Text requires specific prefixes for search queries and documents.
+    Wrapper for wrapping any embedding model (like nomic-embed-text) 
+    to add search_document: and search_query: prefixes required by Nomic.
     """
+    def __init__(self, base_embeddings: Embeddings):
+        self.base_embeddings = base_embeddings
+
     def embed_documents(self, texts: List[str]) -> List[List[float]]:
         prefixed_texts = [f"search_document: {text}" for text in texts]
-        return super().embed_documents(prefixed_texts)
+        return self.base_embeddings.embed_documents(prefixed_texts)
 
     def embed_query(self, text: str) -> List[float]:
         prefixed_text = f"search_query: {text}"
-        return super().embed_query(prefixed_text)
+        return self.base_embeddings.embed_query(prefixed_text)
 
-def _init_pinecone_index():
+def get_embeddings() -> Embeddings:
+    """
+    Initializes and returns the Embedding Model dynamically configured in the .env file.
+    Uses LangChain's unified init_embeddings to load any model provider.
+    """
+    provider = os.getenv("EMBEDDING_PROVIDER").lower().strip()
+    model_name = os.getenv("EMBEDDING_MODEL").strip()
+
+    # Dynamically initialize any supported LangChain embedding model
+    base_embeddings = init_embeddings(
+        model=model_name,
+        provider=provider
+    )
+
+    # Wrap with Nomic prefixes if using nomic-embed-text
+    if "nomic-embed-text" in model_name.lower():
+        return NomicPrefixEmbeddings(base_embeddings)
+        
+    return base_embeddings
+
+def _init_pinecone_index(embeddings: Embeddings):
     """
     Initializes the Pinecone client and creates the index if it doesn't exist.
+    Automatically handles index recreation if there's a dimension mismatch.
     """
     api_key = os.environ.get("PINECONE_API_KEY")
     if not api_key:
@@ -35,12 +60,26 @@ def _init_pinecone_index():
     
     pc = Pinecone(api_key=api_key)
     
-    # Create the index if it does not exist
+    # Determine the target dimension dynamically
+    print("Determining embedding model dimension dynamically...")
+    dummy_vector = embeddings.embed_query("dimension_test")
+    dimension = len(dummy_vector)
+    
+    # Check if the index already exists and verify its dimension
+    if INDEX_NAME in pc.list_indexes().names():
+        desc = pc.describe_index(INDEX_NAME)
+        if desc.dimension != dimension:
+            print(f"Warning: Found existing Pinecone index '{INDEX_NAME}' with dimension {desc.dimension}, "
+                  f"but the configured embedding model requires {dimension} dimensions.")
+            print(f"Deleting the incompatible index '{INDEX_NAME}' to recreate it...")
+            pc.delete_index(INDEX_NAME)
+            
+    # Create the index if it does not exist (or if it was just deleted)
     if INDEX_NAME not in pc.list_indexes().names():
-        print(f"Creating new Pinecone index: '{INDEX_NAME}'...")
+        print(f"Creating new Pinecone index: '{INDEX_NAME}' with dimension {dimension}...")
         pc.create_index(
             name=INDEX_NAME,
-            dimension=768, # Dimension for nomic-embed-text
+            dimension=dimension,
             metric='cosine',
             spec=ServerlessSpec(
                 cloud='aws',
@@ -51,7 +90,7 @@ def _init_pinecone_index():
 
 def create_vector_store(chunks: List[Document]) -> PineconeVectorStore:
     """
-    Embeds document chunks using Nomic and saves them in a cloud Pinecone Vector Database.
+    Embeds document chunks using configured embedding model and saves them in a cloud Pinecone Vector Database.
     """
     # Filter out empty or whitespace-only chunks
     valid_chunks = []
@@ -59,16 +98,16 @@ def create_vector_store(chunks: List[Document]) -> PineconeVectorStore:
         if chunk.page_content and chunk.page_content.strip():
             valid_chunks.append(chunk)
         else:
-            print("⚠️ Warning: Skipped an empty or invalid text chunk to prevent index errors.")
+            print("Warning: Skipped an empty or invalid text chunk to prevent index errors.")
 
     if not valid_chunks:
         raise ValueError("No valid text chunks remained after filtering empty content. Cannot build vector store.")
 
-    # Initialize Pinecone and create index if missing
-    _init_pinecone_index()
+    # Initialize dynamic embeddings
+    embeddings = get_embeddings()
 
-    print("Initializing Ollama Embeddings with Nomic prefixes (nomic-embed-text)...")
-    embeddings = NomicOllamaEmbeddings(model="nomic-embed-text")
+    # Initialize Pinecone and create index if missing (passing embeddings to determine dimension)
+    _init_pinecone_index(embeddings)
 
     print(f"Embedding {len(valid_chunks)} chunks and saving to Pinecone index '{INDEX_NAME}'...")
     
@@ -88,8 +127,8 @@ def get_vector_store() -> PineconeVectorStore:
     """
     Loads the existing Pinecone instance for querying.
     """
-    _init_pinecone_index() # Ensure index exists before querying
-    embeddings = NomicOllamaEmbeddings(model="nomic-embed-text")
+    embeddings = get_embeddings()
+    _init_pinecone_index(embeddings) # Ensure index exists before querying
     return PineconeVectorStore(
         index_name=INDEX_NAME,
         embedding=embeddings

@@ -10,3 +10,4 @@ langchain-community
 langchain-core
 pypdf
 sentence-transformers
+langchain-openai
