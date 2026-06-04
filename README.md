@@ -164,6 +164,178 @@ AI_Tutor_System/
 - **Token Streaming:** Real-time token streaming for improved user experience
 - **Dynamic Quizzes:** MCQ quiz generation based on course materials
 
+---
+
+# System Architecture (Week 3)
+
+## Memory & Quiz Engine Pipeline
+
+```text
+┌────────────────────────────────────────────────────────────────────────────┐
+│                    WEEK 3: MEMORY & QUIZ ENGINE PIPELINE                  │
+└────────────────────────────────────────────────────────────────────────────┘
+
+                        CONVERSATIONAL MEMORY PHASE
+                        ════════════════════════════
+
+     ┌──────────────────────────────────┐
+     │   User Query with Context        │
+     │   (from Week 2 Chat Response)    │
+     └──────────┬───────────────────────┘
+                │
+                v
+     ┌──────────────────────────────────────────┐
+     │  Week_3/core/memory_manager.py           │
+     ├──────────────────────────────────────────┤
+     │  • Conversation History Storage          │
+     │  • Session Management                    │
+     │  • Context Window Management             │
+     │  • Memory Persistence                    │
+     └──────────┬───────────────────────────────┘
+                │
+                ├───────────┬──────────────┬──────────────┐
+                │           │              │              │
+                v           v              v              v
+     ┌────────────────┐ ┌──────────────┐ ┌──────────────┐ ┌─────────────┐
+     │ Message Store  │ │ Embeddings   │ │ Context      │ │ Session DB  │
+     ├────────────────┤ ├──────────────┤ ├──────────────┤ ├─────────────┤
+     │ • User Query   │ │ • Query Emb. │ │ • K Relevant │ │ • User ID   │
+     │ • Bot Response │ │ • Response   │ │   Messages   │ │ • Timestamp │
+     │ • Metadata     │ │   Emb.       │ │ • Relevance  │ │ • Thread ID │
+     │ • Timestamps   │ │ • Similarity │ │   Score      │ │ • Analytics │
+     └────────┬───────┘ └──────┬───────┘ └────────┬─────┘ └────────┬────┘
+              │                │                 │                 │
+              └────────────────┼─────────────────┼─────────────────┘
+                               │
+                               v
+                    ┌──────────────────────────────┐
+                    │ Enhanced Context Assembly    │
+                    ├──────────────────────────────┤
+                    │ • Conversation Thread        │
+                    │ • Retrieved Context Chunks   │
+                    │ • Memory-Augmented Prompt    │
+                    └──────────┬───────────────────┘
+                               │
+                               v
+                    ┌──────────────────────────────┐
+                    │ Back to Week 2 RAG Engine    │
+                    │ (For Enhanced Response)      │
+                    └──────────────────────────────┘
+
+                           DYNAMIC MCQ QUIZ ENGINE
+                           ═══════════════════════
+
+     ┌──────────────────────────────┐
+     │  Quiz Trigger Request        │
+     │  (from Frontend)             │
+     └──────────┬────────────────────┘
+                │
+                v
+     ┌──────────────────────────────────────────┐
+     │  Week_3/core/quiz_generator.py           │
+     ├──────────────────────────────────────────┤
+     │  • Query ChromaDB for Content            │
+     │  • MCQ Generation Logic                  │
+     │  • Answer Validation                     │
+     │  • Difficulty Level Selection            │
+     └──────────┬───────────────────────────────┘
+                │
+                ├──────────────┬──────────────┬──────────────┐
+                │              │              │              │
+                v              v              v              v
+     ┌────────────────┐ ┌────────────────┐ ┌──────────────┐ ┌─────────────┐
+     │ Concept Select │ │ Question Craft │ │ Distractors  │ │ Validation  │
+     ├────────────────┤ ├────────────────┤ ├──────────────┤ ├─────────────┤
+     │ • Extract Key  │ │ • LLM-based    │ │ • Generate   │ │ • Check     │
+     │   Topics       │ │   Generation   │ │   Wrong Opts │ │   Answers   │
+     │ • Difficulty   │ │ • Context      │ │ • Plausible  │ │ • Scoring   │
+     │   Based Select │ │   Inclusion    │ │   Answers    │ │ • Analytics │
+     │ • Sample Size  │ │ • Grammar      │ │ • Randomize  │ │             │
+     │               │ │   Check        │ │   Order      │ │             │
+     └────────┬───────┘ └────────┬───────┘ └────────┬─────┘ └────────┬────┘
+              │                 │                 │                 │
+              └─────────────────┼─────────────────┼─────────────────┘
+                                │
+                                v
+                  ┌───────────────────────────────┐
+                  │  Quiz Assessment Output       │
+                  ├───────────────────────────────┤
+                  │  • Questions (4-5 options)    │
+                  │  • Correct Answers            │
+                  │  • Explanations w/ Citations  │
+                  │  • Difficulty Level           │
+                  │  • Estimated Time             │
+                  └───────────┬───────────────────┘
+                              │
+                              v
+                 ┌─────────────────────────────┐
+                 │  Week_3/api/quiz_router.py  │
+                 ├─────────────────────────────┤
+                 │  • /quiz/generate            │
+                 │  • /quiz/submit              │
+                 │  • /quiz/history             │
+                 │  • /quiz/performance         │
+                 └───────────┬───────────────────┘
+                             │
+                             v
+              ┌─────────────────────────────────┐
+              │  Quiz Results & Analytics       │
+              ├─────────────────────────────────┤
+              │  • Score Calculation            │
+              │  • Performance Metrics          │
+              │  • Weakness Identification      │
+              │  • Recommendations              │
+              └─────────────────────────────────┘
+
+                        DATA FLOW INTEGRATION
+                        ═══════════════════════
+
+     ┌─────────────────┐
+     │  Week 2 Output  │
+     │  (Chat Response)│
+     └────────┬────────┘
+              │
+              v
+     ┌──────────────────────────────┐
+     │  Week 3 Memory System        │ ◄─── Enhances Context
+     │  Stores Conversation         │
+     │  for Future References       │
+     └────────┬─────────────────────┘
+              │
+              ├─────────────────┬─────────────────┐
+              │                 │                 │
+              v                 v                 v
+     ┌──────────────┐  ┌──────────────┐  ┌──────────────┐
+     │ Next Chat    │  │ Quiz Engine  │  │ Performance  │
+     │ (W2 + W3)    │  │ Access Memory│  │ Tracking     │
+     └──────────────┘  └──────────────┘  └──────────────┘
+```
+
+## Week 3 Component Details
+
+### Conversation Memory Manager
+- **Session Storage:** Maintains per-user conversation threads with timestamps
+- **Context Retrieval:** Fetches relevant past messages based on semantic similarity
+- **Memory Persistence:** Stores conversations in persistent storage for session continuity
+- **Context Window:** Manages token limits by intelligently selecting important messages
+- **Analytics:** Tracks conversation metrics for performance insights
+
+### Dynamic MCQ Quiz Generator
+- **Content Extraction:** Retrieves key concepts from ChromaDB-stored documents
+- **Question Generation:** Uses LLM to create natural, contextual questions with multiple choice options
+- **Distractor Generation:** Creates plausible but incorrect answer choices
+- **Difficulty Levels:** Supports Easy, Medium, and Hard quiz variations
+- **Answer Validation:** Ensures correctness and provides detailed explanations with source citations
+- **Performance Tracking:** Records quiz history and identifies learning gaps
+
+### API Endpoints (Week 3)
+- **`/quiz/generate`** - Generate a new quiz with specified parameters
+- **`/quiz/submit`** - Submit quiz answers and get immediate feedback
+- **`/quiz/history`** - Retrieve past quiz attempts and performance
+- **`/quiz/performance`** - Get performance analytics and learning recommendations
+
+---
+
 ## TECH STACK
 
 **Frontend:**
@@ -182,6 +354,10 @@ AI_Tutor_System/
 **Embeddings:**
 - Configurable embedding model
 
+**Memory & Persistence:**
+- Session storage with conversation history
+- Vector-based semantic similarity for context retrieval
+
 **PDF Parsing:**
 - PyPDFLoader (from LangChain)
 
@@ -197,6 +373,7 @@ AI_Tutor_System/
 ✅ **Dynamic MCQ Quizzes** - Auto-generated quizzes from course materials  
 ✅ **Multi-Role UI** - Separate views for students and educators  
 ✅ **Local Vector Store** - Privacy-preserving ChromaDB for embedding storage  
+✅ **Performance Analytics** - Track learning progress and identify knowledge gaps  
 
 ## 🚀 Getting Started
 
