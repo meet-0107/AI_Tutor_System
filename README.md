@@ -1,6 +1,6 @@
 # AI_Tutor_System
 
-This AI tutor transforms course materials into an interactive chat using a strict RAG pipeline. Built with FastAPI, LangChain, and ChromaDB, it provides hallucination-free guidance, source citations, conversational memory, token streaming, and dynamic MCQ quizzes for a personalized learning experience.
+This AI tutor transforms course materials into an interactive chat using a strict RAG pipeline. Built with FastAPI, LangChain, and ChromaDB, it provides hallucination-free guidance, source citations, and dynamic quiz generation with conversational memory.
 
 ## 🗂️ Project Structure
 
@@ -26,14 +26,16 @@ AI_Tutor_System/
 └── README.md                # Project documentation
 ```
 
-# System Architecture (Week 1 & Week 2)
+---
 
-## Complete Data Flow & RAG Pipeline
+# System Architecture (Week 1, 2 & 3)
+
+## Complete Data Flow & Integrated Pipeline
 
 ```text
-┌────────────────────────────────────────────────────────────────────────────┐
-│                    WEEK 1 & 2: COMPLETE AI TUTOR PIPELINE                │
-└────────────────────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────────┐
+│              WEEK 1, 2 & 3: COMPLETE AI TUTOR PIPELINE                 │
+└─────────────────────────────────────────────────────────────────────────┘
 
                            DATA INGESTION PHASE (WEEK 1)
                            ════════════════════════════
@@ -106,6 +108,7 @@ AI_Tutor_System/
      │  • /chat (chat_router)               │
      │  • /ingest                           │
      │  • /health                           │
+     │  • /quiz/* (Week_3 endpoints)        │
      └──────────┬───────────────────────────┘
                 │
                 v
@@ -124,18 +127,45 @@ AI_Tutor_System/
                 ├────────────────────────────┬──────────────┐
                 │                            │              │
                 v                            v              v
-     ┌──────────────────────┐  ┌──────────────────────┐  ┌──────────────────┐
-     │ LangChain            │  │ ChromaDB             │  │ LLM Engine       │
-     │ Integration          │  │ Retriever            │  │ (Configurable)   │
-     ├──────────────────────┤  ├──────────────────────┤  ├──────────────────┤
-     │ • Vector Retriever   │  │ • Get Query          │  │ • LLM Instance   │
-     │ • Prompt Templates   │  │   Embeddings         │  │ • Prompt: Context│
-     │ • LLM Chain          │  │ • Similarity Search  │  │ • Generate       │
-     │   Integration        │  │ • Return Top K       │  │   Response       │
-     │ • Streaming Support  │  │   Relevant Chunks    │  │ • Token Streaming│
-     └──────────┬───────────┘  └──────────┬───────────┘  └──────────┬───────┘
+     ┌──────────────────────┐  ┌──────────────────────┐  ┌──────────────┐
+     │ LangChain            │  │ ChromaDB             │  │ LLM Engine   │
+     │ Integration          │  │ Retriever            │  │ (Configurable)
+     ├──────────────────────┤  ├──────────────────────┤  ├──────────────┤
+     │ • Vector Retriever   │  │ • Get Query          │  │ • LLM Instance
+     │ • Prompt Templates   │  │   Embeddings         │  │ • Prompt: Ctx│
+     │ • LLM Chain          │  │ • Similarity Search  │  │ • Generate   │
+     │   Integration        │  │ • Return Top K       │  │   Response   │
+     │ • Streaming Support  │  │   Relevant Chunks    │  │ • Streaming  │
+     └──────────┬───────────┘  └──────────┬───────────┘  └──────────┬───┘
                 │                         │                         │
                 └─────────────────────────┼─────────────────────────┘
+                                          │
+                              ┌───────────v───────────┐
+                              │  Conversational       │
+                              │  Memory System (W3)   │
+                              └───────────┬───────────┘
+                                          │
+                    ┌─────────────────────┼────────────────────┐
+                    │                     │                    │
+                    v                     v                    v
+         ┌────────────────────┐  ┌──────────────────┐  ┌─────────────────┐
+         │ Message Store      │  │ Embeddings Sim.  │  │ Session DB      │
+         ├────────────────────┤  ├──────────────────┤  ├─────────────────┤
+         │ • User Query       │  │ • Query Embedds  │  │ • User ID       │
+         │ • Bot Response     │  │ • Response Emb.  │  │ • Timestamp     │
+         │ • Metadata         │  │ • Relevance Scr. │  │ • Thread ID     │
+         │ • Timestamps       │  │ • Retrieval Score│  │ • Analytics     │
+         └────────┬───────────┘  └────────┬─────────┘  └────────┬────────┘
+                  │                       │                     │
+                  └───────────────────────┼─────────────────────┘
+                                          │
+                              ┌───────────v──────────────┐
+                              │ Enhanced Context Asm.    │
+                              ├───────────────────────────┤
+                              │ • Conv. Thread           │
+                              │ • Retrieved Chunks       │
+                              │ • Memory-Aug. Prompt     │
+                              └───────────┬──────────────┘
                                           │
                                           v
                          ┌────────────────────────────────┐
@@ -151,79 +181,9 @@ AI_Tutor_System/
                      │  HTTP Response to Frontend       │
                      │  (Streamed or Complete Response) │
                      └──────────────────────────────────┘
-```
 
-## Component Overview
-
-- **Frontend:** Streamlit app for interactive UI (Student/Educator views, chat, quizzes)
-- **Backend:** FastAPI with Uvicorn provides REST API for chat, ingestion, and quiz endpoints
-- **RAG Engine:** Retrieves context chunks from ChromaDB, constructs prompts, generates responses using LLM via LangChain
-- **Vector Database:** ChromaDB stores embedded document vectors and handles semantic search
-- **Data Ingestion:** Parses PDF documents, splits text into chunks, computes embeddings, and persists in ChromaDB
-- **Conversational Memory:** Maintains conversation history for context-aware responses
-- **Token Streaming:** Real-time token streaming for improved user experience
-- **Dynamic Quizzes:** MCQ quiz generation based on course materials
-
----
-
-# System Architecture (Week 3)
-
-## Memory & Quiz Engine Pipeline
-
-```text
-┌────────────────────────────────────────────────────────────────────────────┐
-│                    WEEK 3: MEMORY & QUIZ ENGINE PIPELINE                  │
-└────────────────────────────────────────────────────────────────────────────┘
-
-                        CONVERSATIONAL MEMORY PHASE
-                        ════════════════════════════
-
-     ┌──────────────────────────────────┐
-     │   User Query with Context        │
-     │   (from Week 2 Chat Response)    │
-     └──────────┬───────────────────────┘
-                │
-                v
-     ┌──────────────────────────────────────────┐
-     │  Week_3/core/memory_manager.py           │
-     ├──────────────────────────────────────────┤
-     │  • Conversation History Storage          │
-     │  • Session Management                    │
-     │  • Context Window Management             │
-     │  • Memory Persistence                    │
-     └──────────┬───────────────────────────────┘
-                │
-                ├───────────┬──────────────┬──────────────┐
-                │           │              │              │
-                v           v              v              v
-     ┌────────────────┐ ┌──────────────┐ ┌──────────────┐ ┌─────────────┐
-     │ Message Store  │ │ Embeddings   │ │ Context      │ │ Session DB  │
-     ├────────────────┤ ├──────────────┤ ├──────────────┤ ├─────────────┤
-     │ • User Query   │ │ • Query Emb. │ │ • K Relevant │ │ • User ID   │
-     │ • Bot Response │ │ • Response   │ │   Messages   │ │ • Timestamp │
-     │ • Metadata     │ │   Emb.       │ │ • Relevance  │ │ • Thread ID │
-     │ • Timestamps   │ │ • Similarity │ │   Score      │ │ • Analytics │
-     └────────┬───────┘ └──────┬───────┘ └────────┬─────┘ └────────┬────┘
-              │                │                 │                 │
-              └────────────────┼─────────────────┼─────────────────┘
-                               │
-                               v
-                    ┌──────────────────────────────┐
-                    │ Enhanced Context Assembly    │
-                    ├──────────────────────────────┤
-                    │ • Conversation Thread        │
-                    │ • Retrieved Context Chunks   │
-                    │ • Memory-Augmented Prompt    │
-                    └──────────┬───────────────────┘
-                               │
-                               v
-                    ┌──────────────────────────────┐
-                    │ Back to Week 2 RAG Engine    │
-                    │ (For Enhanced Response)      │
-                    └──────────────────────────────┘
-
-                           DYNAMIC MCQ QUIZ ENGINE
-                           ═══════════════════════
+                     DYNAMIC MCQ QUIZ ENGINE (WEEK 3)
+                     ═════════════════════════════════
 
      ┌──────────────────────────────┐
      │  Quiz Trigger Request        │
@@ -243,16 +203,16 @@ AI_Tutor_System/
                 ├──────────────┬──────────────┬──────────────┐
                 │              │              │              │
                 v              v              v              v
-     ┌────────────────┐ ┌────────────────┐ ┌──────────────┐ ┌─────────────┐
-     │ Concept Select │ │ Question Craft │ │ Distractors  │ │ Validation  │
-     ├────────────────┤ ├────────────────┤ ├──────────────┤ ├─────────────┤
-     │ • Extract Key  │ │ • LLM-based    │ │ • Generate   │ │ • Check     │
-     │   Topics       │ │   Generation   │ │   Wrong Opts │ │   Answers   │
-     │ • Difficulty   │ │ • Context      │ │ • Plausible  │ │ • Scoring   │
-     │   Based Select │ │   Inclusion    │ │   Answers    │ │ • Analytics │
-     │ • Sample Size  │ │ • Grammar      │ │ • Randomize  │ │             │
-     │               │ │   Check        │ │   Order      │ │             │
-     └────────┬───────┘ └────────┬───────┘ └────────┬─────┘ └────────┬────┘
+     ┌────────────────┐ ┌────────────────┐ ┌──────────────┐ ┌──────────────┐
+     │ Concept Select │ │ Question Craft │ │ Distractors  │ │ Validation   │
+     ├────────────────┤ ├────────────────┤ ├──────────────┤ ├──────────────┤
+     │ • Extract Key  │ │ • LLM-based    │ │ • Generate   │ │ • Check Ans. │
+     │   Topics       │ │   Generation   │ │   Wrong Opts │ │ • Scoring    │
+     │ • Difficulty   │ │ • Context      │ │ • Plausible  │ │ • Analytics  │
+     │   Based Select │ │   Inclusion    │ │   Answers    │ │              │
+     │ • Sample Size  │ │ • Grammar      │ │ • Randomize  │ │              │
+     │               │ │   Check        │ │   Order      │ │              │
+     └────────┬───────┘ └────────┬───────┘ └────────┬─────┘ └────────┬─────┘
               │                 │                 │                 │
               └─────────────────┼─────────────────┼─────────────────┘
                                 │
@@ -286,53 +246,31 @@ AI_Tutor_System/
               │  • Weakness Identification      │
               │  • Recommendations              │
               └─────────────────────────────────┘
-
-                        DATA FLOW INTEGRATION
-                        ═══════════════════════
-
-     ┌─────────────────┐
-     │  Week 2 Output  │
-     │  (Chat Response)│
-     └────────┬────────┘
-              │
-              v
-     ┌──────────────────────────────┐
-     │  Week 3 Memory System        │ ◄─── Enhances Context
-     │  Stores Conversation         │
-     │  for Future References       │
-     └────────┬─────────────────────┘
-              │
-              ├─────────────────┬─────────────────┐
-              │                 │                 │
-              v                 v                 v
-     ┌──────────────┐  ┌──────────────┐  ┌──────────────┐
-     │ Next Chat    │  │ Quiz Engine  │  │ Performance  │
-     │ (W2 + W3)    │  │ Access Memory│  │ Tracking     │
-     └──────────────┘  └──────────────┘  └──────────────┘
 ```
 
-## Week 3 Component Details
+## Component Overview
 
-### Conversation Memory Manager
-- **Session Storage:** Maintains per-user conversation threads with timestamps
-- **Context Retrieval:** Fetches relevant past messages based on semantic similarity
-- **Memory Persistence:** Stores conversations in persistent storage for session continuity
-- **Context Window:** Manages token limits by intelligently selecting important messages
-- **Analytics:** Tracks conversation metrics for performance insights
+### Week 1: Data Ingestion & Vectorization
+- **Document Parser:** Loads PDF documents and splits text into semantic chunks (1000 chars, 200 char overlap)
+- **Embedding Generation:** Converts text chunks into vector embeddings using configurable models
+- **Vector Storage:** Persists embeddings in ChromaDB for efficient retrieval and local privacy
 
-### Dynamic MCQ Quiz Generator
-- **Content Extraction:** Retrieves key concepts from ChromaDB-stored documents
-- **Question Generation:** Uses LLM to create natural, contextual questions with multiple choice options
-- **Distractor Generation:** Creates plausible but incorrect answer choices
+### Week 2: RAG Engine & Query Processing
+- **Frontend:** Streamlit app for interactive UI (Student/Educator views, chat, quizzes)
+- **Backend:** FastAPI with Uvicorn provides REST API for chat, ingestion, and quiz endpoints
+- **RAG Engine:** Retrieves context chunks from ChromaDB, constructs prompts, generates responses using LLM via LangChain
+- **Vector Retriever:** Handles semantic similarity search across embedded documents
+- **Token Streaming:** Real-time token streaming for improved user experience
+
+### Week 3: Conversational Memory & Quiz Engine
+- **Conversation Memory Manager:** Maintains per-user conversation threads with semantic context retrieval
+- **Session Storage:** Persists conversations with timestamps and metadata for continuity across sessions
+- **Context Window Management:** Intelligently selects important messages within token limits
+- **Dynamic MCQ Quiz Generator:** Creates natural, contextual questions from course materials with multiple choice options
+- **Distractor Generation:** Produces plausible but incorrect answer choices using LLM
 - **Difficulty Levels:** Supports Easy, Medium, and Hard quiz variations
-- **Answer Validation:** Ensures correctness and provides detailed explanations with source citations
-- **Performance Tracking:** Records quiz history and identifies learning gaps
-
-### API Endpoints (Week 3)
-- **`/quiz/generate`** - Generate a new quiz with specified parameters
-- **`/quiz/submit`** - Submit quiz answers and get immediate feedback
-- **`/quiz/history`** - Retrieve past quiz attempts and performance
-- **`/quiz/performance`** - Get performance analytics and learning recommendations
+- **Performance Tracking:** Records quiz history and identifies learning gaps for personalized recommendations
+- **API Endpoints:** /quiz/generate, /quiz/submit, /quiz/history, /quiz/performance
 
 ---
 
@@ -368,12 +306,13 @@ AI_Tutor_System/
 
 ✅ **RAG Pipeline** - Retrieval-Augmented Generation for accurate, sourced responses  
 ✅ **Hallucination-Free** - Strict adherence to course materials with source citations  
-✅ **Conversational Memory** - Maintains context across multiple turns  
+✅ **Conversational Memory** - Maintains context across multiple turns with semantic retrieval  
 ✅ **Token Streaming** - Real-time response streaming for better UX  
-✅ **Dynamic MCQ Quizzes** - Auto-generated quizzes from course materials  
+✅ **Dynamic MCQ Quizzes** - Auto-generated quizzes from course materials with explanations  
 ✅ **Multi-Role UI** - Separate views for students and educators  
 ✅ **Local Vector Store** - Privacy-preserving ChromaDB for embedding storage  
 ✅ **Performance Analytics** - Track learning progress and identify knowledge gaps  
+✅ **Integrated Memory System** - Context-aware responses using conversation history  
 
 ## 🚀 Getting Started
 
@@ -419,7 +358,7 @@ streamlit run app.py
 1. **Ingest Documents:** Upload PDF materials through the Educator view
 2. **Chat:** Ask questions about the course material and get instant answers with citations
 3. **Take Quizzes:** Generate and take dynamic MCQ quizzes to test your knowledge
-4. **Track Progress:** Monitor learning progress and quiz performance
+4. **Track Progress:** Monitor learning progress and quiz performance with analytics
 
 ## 🤝 Contributing
 
