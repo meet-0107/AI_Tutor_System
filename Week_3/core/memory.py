@@ -21,7 +21,7 @@ def _load_history_from_disk(session_id: str) -> ChatMessageHistory:
     history = ChatMessageHistory()
     try:
         if os.path.exists(CONVS_FILE):
-            with open(CONVS_FILE, "r") as f:
+            with open(CONVS_FILE, "r", encoding="utf-8") as f:
                 convs = json.load(f)
             messages = convs.get(session_id, [])
             for msg in messages:
