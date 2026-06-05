@@ -50,10 +50,10 @@ def load_and_chunk_pdf(file_path: str) -> List[Document]:
 if __name__ == "__main__":
     # Define the path to the sample syllabus
     # Assuming this script is run from the root of the 'ai-tutor-platform' project
-    sample_pdf_path = os.path.join("data_samples", "AIML-NOTE.pdf")
+    sample_pdf_path = os.path.join("uploaded_files", "AIML-NOTE.pdf")
     
     # Create a dummy PDF for testing if it doesn't exist
-    os.makedirs("data_samples", exist_ok=True)
+    os.makedirs("uploaded_files", exist_ok=True)
     if not os.path.exists(sample_pdf_path):
         print("Creating a dummy PDF for testing...")
         # A quick way to test without a real PDF is to handle the error or create one manually.

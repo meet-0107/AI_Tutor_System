@@ -1,0 +1,77 @@
+[
+    {
+        "query": "test query",
+        "session_id": "test_sess",
+        "timestamp": "2026-06-03 10:42:36"
+    },
+    {
+        "query": "What is deep learning?",
+        "session_id": "test_sess",
+        "timestamp": "2026-06-03 10:44:04"
+    },
+    {
+        "query": "What is NLP?",
+        "session_id": "587844ef-16a5-43ce-935a-e0a7dd157a31",
+        "timestamp": "2026-06-03 10:49:24"
+    },
+    {
+        "query": "Generate flashcards: Supervised Learning",
+        "session_id": "test_sess",
+        "timestamp": "2026-06-03 15:29:26"
+    },
+    {
+        "query": "Generate quiz: Neural Networks",
+        "session_id": "test_sess",
+        "timestamp": "2026-06-03 15:29:59"
+    },
+    {
+        "query": "types of knowledge?",
+        "session_id": "dbcd442a-c61d-4f7e-8eb9-4adb17a49f69",
+        "timestamp": "2026-06-03 15:32:02"
+    },
+    {
+        "query": "types of machine learning?",
+        "session_id": "cae6701f-a380-4ea9-b334-eee36234ac28",
+        "timestamp": "2026-06-03 15:34:23"
+    },
+    {
+        "query": "types of machine learning?",
+        "session_id": "82f0b591-7c07-4c7f-90c9-2f2b141e579b",
+        "timestamp": "2026-06-03 15:34:52"
+    },
+    {
+        "query": "types of machine learning?",
+        "session_id": "31daaac7-92f5-46b4-9348-7f90c91418dd",
+        "timestamp": "2026-06-03 15:35:04"
+    },
+    {
+        "query": "Generate mind map: types of knowledge",
+        "session_id": "31daaac7-92f5-46b4-9348-7f90c91418dd",
+        "timestamp": "2026-06-03 17:37:09"
+    },
+    {
+        "query": "Generate mind map: what is knowledge",
+        "session_id": "31daaac7-92f5-46b4-9348-7f90c91418dd",
+        "timestamp": "2026-06-03 17:37:56"
+    },
+    {
+        "query": "Generate mind map: Uninformed Search Techniques",
+        "session_id": "31daaac7-92f5-46b4-9348-7f90c91418dd",
+        "timestamp": "2026-06-03 17:44:39"
+    },
+    {
+        "query": "Generate mind map: Uninformed Search Techniques",
+        "session_id": "31daaac7-92f5-46b4-9348-7f90c91418dd",
+        "timestamp": "2026-06-03 17:44:39"
+    },
+    {
+        "query": "\u2022 Uninformed Search Techniques",
+        "session_id": "ac72dcee-cebd-4b39-92ee-5bb6106bed23",
+        "timestamp": "2026-06-03 17:45:07"
+    },
+    {
+        "query": "Generate mind map: \u2022 Uninformed Search Techniques",
+        "session_id": "ac72dcee-cebd-4b39-92ee-5bb6106bed23",
+        "timestamp": "2026-06-03 17:45:30"
+    }
+]

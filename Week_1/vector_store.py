@@ -116,7 +116,7 @@ def get_vector_store() -> VectorStore:
         raise ValueError("VECTOR_STORE_INDEX_NAME environment variable is not set.")
 
     embeddings = get_embeddings()
-    _init_index(embeddings) # Ensure index exists
+    # _init_index(embeddings) # Ensure index exists (skipped on read for fast backend startup)
     from langchain_pinecone import Pinecone as PineconeVectorStore
     return PineconeVectorStore(
         index_name=INDEX_NAME,
@@ -132,7 +132,7 @@ if __name__ == "__main__":
         print("Make sure this is in the same directory as document_parser.py")
         exit(1)
 
-    data_samples_dir = "data_samples"
+    data_samples_dir = "uploaded_files"
     
     if not os.path.exists(data_samples_dir) or not os.listdir(data_samples_dir):
         print(f"Cannot run test. Please place real PDFs in the '{data_samples_dir}' folder.")

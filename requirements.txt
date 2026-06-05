@@ -10,4 +10,4 @@ langchain-community==0.4.1
 langchain-core==1.4.0
 pypdf==6.12.0
 sentence-transformers==5.5.1
-langchain-openai==1.2.2
+google-generativeai

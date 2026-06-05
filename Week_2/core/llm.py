@@ -11,6 +11,8 @@ def get_llm() -> BaseChatModel:
     Initializes and returns the Chat Model dynamically configured in the .env file.
     """
     provider = os.getenv("LLM_PROVIDER").lower().strip()
+    if provider == "gemini":
+        provider = "google_genai"
     model_name = os.getenv("LLM_MODEL").strip()
     temp_env = os.getenv("LLM_TEMPERATURE")
     temperature = float(temp_env) if temp_env else 0.7

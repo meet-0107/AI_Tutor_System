@@ -1,3 +1,9 @@
+import os
+import sys
+
+# Add project root to sys.path to fix module imports when run directly
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
+
 from Week_2 import get_llm, get_tutor_prompt
 from Week_1 import get_vector_store
 from langchain_core.output_parsers import StrOutputParser

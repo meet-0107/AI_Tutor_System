@@ -248,6 +248,14 @@ AI_Tutor_System/
                └─────────────────────────────────┘
 ```
 
+## System Architecture (Week 4: Frontend & Streaming)
+
+Week 4 introduces a dynamic frontend and real-time streaming capabilities to enhance the user experience:
+
+- **Streamlit Frontend**: A multipage application featuring a **Student Tutor** chat interface for students, and an **Educator Dashboard** for document ingestion and quiz generation.
+- **Server-Sent Events (SSE)**: The FastAPI backend includes a `/chat/stream` endpoint that utilizes asynchronous generators to yield tokens directly from the LangChain LCEL pipeline, providing instantaneous, token-by-token feedback.
+- **Environment Security**: All sensitive API keys and models are dynamically configured and securely loaded via `.env` files.
+
 ## Component Overview
 
 ### Week 1: Data Ingestion & Vectorization
