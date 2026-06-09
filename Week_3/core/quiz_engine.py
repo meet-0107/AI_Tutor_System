@@ -40,6 +40,9 @@ def generate_quiz(topic: str) -> Quiz:
         "You are an expert curriculum designer. Based on the syllabus context provided below, "
         "generate a multiple-choice quiz about '{topic}'. "
         "The quiz must contain exactly 5 questions. Ensure the distractors (incorrect options) are plausible.\n\n"
+        "CRITICAL: Do NOT escape special characters (like '*' or quotes) with backslashes. "
+        "Never output a backslash (\\) anywhere in the questions, options, or explanations. "
+        "For example, write 'A* Search' instead of 'A\\* Search', and write 'Dijkstra's' instead of 'Dijkstra\\'s'.\n\n"
         "Syllabus Context:\n{context}"
     )
     

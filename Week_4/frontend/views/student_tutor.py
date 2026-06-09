@@ -9,7 +9,6 @@ from Week_4.frontend import (
     generate_mindmap
 )
 from Week_4.frontend.components import display_chat_history, render_chat_message
-from Week_4.frontend.components.voice_input import render_voice_input
 
 def render():
     st.title("🎓 Student Dashboard")
@@ -118,9 +117,6 @@ def render():
                         st.rerun()
                     except Exception as e:
                         st.error(f"Error communicating with backend: {e}")
-        
-        # Inject the hidden voice input component which renders the mic button and handles Speech Recognition
-        render_voice_input()
 
     # 2. Practice Quiz Tab
     elif st.session_state.active_tab_index == 1:

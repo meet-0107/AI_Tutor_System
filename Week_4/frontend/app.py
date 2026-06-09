@@ -22,7 +22,7 @@ inject_custom_css()
 import time
 import requests
 
-def ensure_backend_alive(url="http://127.0.0.1:8000/health", timeout=90):
+def ensure_backend_alive(url="http://127.0.0.1:8000/health", timeout=300):
     """
     Pings the backend health check endpoint until it is alive,
     showing a clean loading message to prevent connection refused crashes on startup.
@@ -40,7 +40,7 @@ def ensure_backend_alive(url="http://127.0.0.1:8000/health", timeout=90):
 
 # Verify backend is running on first page load
 if "backend_verified" not in st.session_state:
-    with st.spinner("⏳ Starting AI Tutor services, please wait (this may take up to 1-2 minutes on first launch)..."):
+    with st.spinner("⏳ Starting AI Tutor services, please wait (waiting for backend to initialize, this may take up to 2-3 minutes on first launch)..."):
         backend_ready = ensure_backend_alive()
         if not backend_ready:
             st.error("⚠️ AI Tutor Backend is not responding. Please make sure the backend server is running on http://127.0.0.1:8000.")
@@ -48,6 +48,7 @@ if "backend_verified" not in st.session_state:
                 st.rerun()
             st.stop()
         st.session_state.backend_verified = True
+
 
 # Track the current view state: "student", "login_form", "admin"
 if "view_mode" not in st.session_state:

@@ -109,3 +109,68 @@ async def ingest_file(file: UploadFile = File(...)):
         # Cleanup physical temp file so it is not stored physically
         if os.path.exists(temp_file_path):
             os.remove(temp_file_path)
+
+@router.delete("/{filename}")
+async def delete_file(filename: str):
+    """
+    Deletes the file metadata from the registry and its embedded vectors from Pinecone.
+    """
+    uploads_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'uploaded_files'))
+    metadata_file = os.path.join(uploads_dir, 'uploaded_files.json')
+    
+    if not os.path.exists(metadata_file):
+        raise HTTPException(status_code=404, detail="No files uploaded yet.")
+        
+    try:
+        with open(metadata_file, "r", encoding="utf-8") as f:
+            uploaded_files = json.load(f)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to read metadata: {e}")
+        
+    file_exists = any(u.get("filename") == filename for u in uploaded_files)
+    if not file_exists:
+        raise HTTPException(status_code=404, detail=f"File '{filename}' not found in registry.")
+        
+    # Remove from Pinecone
+    try:
+        from Week_1.vector_store import INDEX_NAME
+        from pinecone import Pinecone
+        
+        api_key = os.getenv("PINECONE_API_KEY")
+        if not api_key:
+            raise ValueError("PINECONE_API_KEY is not set.")
+            
+        pc = Pinecone(api_key=api_key)
+        if INDEX_NAME in pc.list_indexes().names():
+            index = pc.Index(INDEX_NAME)
+            
+            # Reconstruct the source paths we used during ingestion
+            temp_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'temp'))
+            temp_file_path = os.path.join(temp_dir, filename)
+            
+            possible_sources = [
+                temp_file_path,
+                temp_file_path.replace("\\", "/"),
+                temp_file_path.replace("/", "\\")
+            ]
+            
+            index.delete(filter={"source": {"$in": possible_sources}})
+    except Exception as e:
+        print(f"[ERROR] Failed to delete vectors from Pinecone: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to delete embeddings from vector store: {e}")
+
+    # Remove from metadata JSON
+    uploaded_files = [u for u in uploaded_files if u.get("filename") != filename]
+    
+    # Save metadata back
+    temp_metadata_file = metadata_file + ".tmp"
+    try:
+        with open(temp_metadata_file, "w", encoding="utf-8") as f:
+            json.dump(uploaded_files, f, indent=4)
+        os.replace(temp_metadata_file, metadata_file)
+    except Exception as e:
+        if os.path.exists(temp_metadata_file):
+            os.remove(temp_metadata_file)
+        raise HTTPException(status_code=500, detail=f"Failed to update registry: {e}")
+        
+    return {"status": "success", "message": f"Successfully deleted {filename}."}

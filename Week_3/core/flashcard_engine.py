@@ -37,6 +37,9 @@ def generate_flashcards(topic: str) -> FlashcardSet:
     prompt = PromptTemplate.from_template(
         "You are an expert curriculum designer. Based on the following syllabus context, "
         "extract the 5 most important key terms related to '{topic}' and provide a concise, accurate definition for each.\n\n"
+        "CRITICAL: Do NOT escape special characters (like '*' or quotes) with backslashes. "
+        "Never output a backslash (\\) anywhere in the term or definition. "
+        "For example, write 'A* Search' instead of 'A\\* Search', and write 'Dijkstra's' instead of 'Dijkstra\\'s'.\n\n"
         "Context:\n{context}\n\n"
         "Generate exactly 5 flashcards."
     )

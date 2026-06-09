@@ -26,7 +26,11 @@ def generate_mindmap(topic: str) -> str:
         "2. Include 3-5 primary branches (first level) representing sub-topics.\n"
         "3. Include secondary leaf nodes (second level) detailing concepts or key terms for each sub-topic.\n"
         "4. Start with `graph TD` or `graph LR`.\n"
-        "5. Respond ONLY with the raw Mermaid.js graph code. Do not wrap in markdown code blocks, do not explain anything, do not include any other text."
+        "5. CRITICAL: Every node label must be wrapped in double quotes inside square brackets. For example, write 'node_id[\"Label Text\"]' instead of 'node_id[Label Text]' or 'node_id(Label Text)'. "
+        "Every single node in the graph (including root, branches, and leaf nodes) must use this exact syntax: A[\"Root Topic\"], B[\"Sub-topic\"], C[\"Concept\"]. "
+        "This is strictly required to prevent Mermaid parsing/syntax errors when labels contain spaces, parentheses '()', or special characters.\n"
+        "6. Do NOT escape special characters (like '*' or quotes) with backslashes inside the text. For example, write 'A* Search' instead of 'A\\* Search'.\n"
+        "7. Respond ONLY with the raw Mermaid.js graph code. Do not wrap in markdown code blocks, do not explain anything, do not include any other text."
     )
     
     chain = prompt_template | llm
@@ -42,4 +46,10 @@ def generate_mindmap(topic: str) -> str:
             lines = lines[:-1]
         content = "\n".join(lines).strip()
         
+    # Programmatically wrap all node labels in double quotes if not already quoted
+    # This prevents syntax errors when labels contain parentheses, quotes, or special characters.
+    import re
+    content = re.sub(r'(\b[a-zA-Z0-9_\-]+)\[([^"\]]+)\]', r'\1["\2"]', content)
+    content = re.sub(r'(\b[a-zA-Z0-9_\-]+)\(([^"\)]+)\)', r'\1("\2")', content)
+
     return content

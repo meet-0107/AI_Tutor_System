@@ -221,3 +221,15 @@ def generate_mindmap(topic: str, session_id: str = "default") -> dict:
     except Exception as e:
         raise Exception(f"Error generating mind map: {e}")
 
+def delete_uploaded_file(filename: str) -> dict:
+    """
+    Deletes the uploaded syllabus file from the backend.
+    """
+    url = f"{API_BASE_URL}/ingest/{filename}"
+    try:
+        response = http_client.delete(url, timeout=15)
+        response.raise_for_status()
+        return response.json()
+    except Exception as e:
+        raise Exception(f"Error deleting syllabus file: {e}")
+

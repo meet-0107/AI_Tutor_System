@@ -48,4 +48,4 @@ def health_check():
 if __name__ == "__main__":
     import uvicorn
     # This block allows you to run the file directly
-    uvicorn.run("Week_2.main:app", host="0.0.0.0", port=8000, reload=True)
+    uvicorn.run("Week_2.main:app", host="0.0.0.0", port=8000, reload=True, reload_dirs=["Week_2", "Week_3"])
