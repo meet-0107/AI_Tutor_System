@@ -274,12 +274,17 @@ def get_chat_history_endpoint(session_id: str):
     """
     data_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'uploaded_files'))
     convs_file = os.path.join(data_dir, 'student_conversations.json')
-    if not os.path.exists(convs_file):
+    if not os.path.exists(convs_file) or os.path.getsize(convs_file) == 0:
         return []
     try:
         with open(convs_file, "r", encoding="utf-8") as f:
             convs = json.load(f)
-        return convs.get(session_id, [])
+        if isinstance(convs, dict):
+            return convs.get(session_id, [])
+        return []
+    except (json.JSONDecodeError, ValueError) as parse_err:
+        print(f"[WARN] student_conversations.json is corrupted ({parse_err}) in get_chat_history_endpoint.")
+        return []
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

@@ -20,17 +20,28 @@ def _load_history_from_disk(session_id: str) -> ChatMessageHistory:
     """
     history = ChatMessageHistory()
     try:
-        if os.path.exists(CONVS_FILE):
+        if os.path.exists(CONVS_FILE) and os.path.getsize(CONVS_FILE) > 0:
             with open(CONVS_FILE, "r", encoding="utf-8") as f:
                 convs = json.load(f)
-            messages = convs.get(session_id, [])
-            for msg in messages:
-                role = msg.get("role", "")
-                content = msg.get("content", "")
-                if role == "user":
-                    history.add_message(HumanMessage(content=content))
-                elif role == "assistant":
-                    history.add_message(AIMessage(content=content))
+            if isinstance(convs, dict):
+                messages = convs.get(session_id, [])
+                if isinstance(messages, list):
+                    for msg in messages:
+                        if isinstance(msg, dict):
+                            role = msg.get("role", "")
+                            content = msg.get("content", "")
+                            if content is None:
+                                content = ""
+                            if isinstance(content, (dict, list)):
+                                content = json.dumps(content)
+                            else:
+                                content = str(content)
+                            if role == "user":
+                                history.add_message(HumanMessage(content=content))
+                            elif role == "assistant":
+                                history.add_message(AIMessage(content=content))
+    except (json.JSONDecodeError, ValueError) as e:
+        print(f"[Memory] Warning: Corrupted history file on disk: {e}")
     except Exception as e:
         print(f"[Memory] Warning: Could not load history for session {session_id}: {e}")
     return history
