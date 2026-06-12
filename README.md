@@ -1,6 +1,6 @@
 # AI_Tutor_System
 
-This AI tutor transforms course materials into an interactive chat using a strict RAG (Retrieval-Augmented Generation) pipeline. Built with **FastAPI**, **LangChain**, **ChromaDB**, and **Streamlit**, it provides hallucination-free guidance, source citations, conversational memory, real-time token streaming, and dynamic MCQ quizzes for a personalized learning experience.
+This AI tutor transforms course materials into an interactive chat using a strict RAG (Retrieval-Augmented Generation) pipeline. Built with **FastAPI**, **LangChain**, **PineconeDB**, and **Streamlit**, it provides hallucination-free guidance, source citations, conversational memory, real-time token streaming, and dynamic MCQ quizzes for a personalized learning experience.
 
 ---
 
